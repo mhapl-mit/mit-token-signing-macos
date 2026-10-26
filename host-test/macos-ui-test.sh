@@ -45,7 +45,7 @@ TEST=$!
 answer() {
     local name=$1 keys=$2 host count
     for _ in $(seq 30); do
-        host=$(pgrep -n chrome-token-signing)
+        host=$(pgrep -n -f MacOS/chrome-token-signing)
         count=$(osascript -e 'tell application "System Events" to count windows of (first process whose unix id is '"$host"')' 2>>"$OUT/osascript.log")
         if [ -n "$count" ] && [ "$count" != 0 ]; then
             sleep 1
@@ -72,7 +72,7 @@ for _ in $(seq 60); do
     kill -0 $TEST 2>/dev/null || break
     sleep 1
 done
-pkill chrome-token-signing
+pkill -f MacOS/chrome-token-signing
 
 STATUS=0
 wait $TEST || STATUS=$?
