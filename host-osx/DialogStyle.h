@@ -112,13 +112,6 @@ static NSTextField *MITStyleDialog(NSWindow *window, NSArray<NSView *> *rows, NS
         [body addView:row inGravity:NSStackViewGravityTop];
         [row.widthAnchor constraintEqualToConstant:contentWidth].active = YES;
     }
-    NSBox *content = [[NSBox alloc] init];
-    content.boxType = NSBoxCustom;
-    content.borderWidth = 0;
-    content.fillColor = NSColor.textBackgroundColor;
-    content.contentViewMargins = NSZeroSize;
-    content.contentView = body;
-
     NSBox *separator = [[NSBox alloc] init];
     separator.boxType = NSBoxSeparator;
 
@@ -133,11 +126,24 @@ static NSTextField *MITStyleDialog(NSWindow *window, NSArray<NSView *> *rows, NS
         [footer addView:button inGravity:NSStackViewGravityTrailing];
     }
 
-    NSStackView *root = [NSStackView stackViewWithViews:buttons.count ? @[content, separator, footer] : @[content]];
+    NSStackView *root = [NSStackView stackViewWithViews:buttons.count ? @[body, separator, footer] : @[body]];
     root.orientation = NSUserInterfaceLayoutOrientationVertical;
     root.alignment = NSLayoutAttributeWidth;
     root.spacing = 0;
     [root.widthAnchor constraintEqualToConstant:width].active = YES;
+    // Background of the content behind it, a box takes no size from its content view
+    NSBox *background = [[NSBox alloc] init];
+    background.boxType = NSBoxCustom;
+    background.borderWidth = 0;
+    background.fillColor = NSColor.textBackgroundColor;
+    background.translatesAutoresizingMaskIntoConstraints = NO;
+    [root addSubview:background positioned:NSWindowBelow relativeTo:body];
+    [NSLayoutConstraint activateConstraints:@[
+        [background.leadingAnchor constraintEqualToAnchor:body.leadingAnchor],
+        [background.trailingAnchor constraintEqualToAnchor:body.trailingAnchor],
+        [background.topAnchor constraintEqualToAnchor:body.topAnchor],
+        [background.bottomAnchor constraintEqualToAnchor:body.bottomAnchor],
+    ]];
     window.contentView = root;
     [root layoutSubtreeIfNeeded];
     [window setContentSize:root.fittingSize];
