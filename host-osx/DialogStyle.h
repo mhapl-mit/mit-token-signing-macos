@@ -87,8 +87,10 @@ static NSTextField *MITStyleDialog(NSWindow *window, NSArray<NSView *> *rows, NS
     NSSize logoSize = logo.image.size;
     [logo.heightAnchor constraintEqualToConstant:36].active = YES;
     [logo.widthAnchor constraintEqualToConstant:36 * logoSize.width / MAX(logoSize.height, 1)].active = YES;
-    NSStackView *header = [NSStackView stackViewWithViews:@[heading, logo]];
+    NSStackView *header = [[NSStackView alloc] init];
     header.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    [header addView:heading inGravity:NSStackViewGravityLeading];
+    [header addView:logo inGravity:NSStackViewGravityTrailing];
     header.alignment = NSLayoutAttributeCenterY;
     header.spacing = 16;
 
@@ -102,6 +104,12 @@ static NSTextField *MITStyleDialog(NSWindow *window, NSArray<NSView *> *rows, NS
     for (NSView *row in rows) {
         [row removeFromSuperview];
         row.translatesAutoresizingMaskIntoConstraints = NO;
+        // The fixed width from the xib would fight the full width
+        for (NSLayoutConstraint *constraint in row.constraints) {
+            if (constraint.firstItem == row && constraint.secondItem == nil && constraint.firstAttribute == NSLayoutAttributeWidth) {
+                constraint.active = NO;
+            }
+        }
         if ([row isKindOfClass:NSTextField.class] && !((NSTextField *)row).editable) {
             NSTextField *label = (NSTextField *)row;
             label.cell.scrollable = NO;
