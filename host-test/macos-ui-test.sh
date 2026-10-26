@@ -21,7 +21,7 @@ SOFTHSM="$(brew --prefix softhsm)/lib/softhsm/libsofthsm2.so"
 softhsm2-util --init-token --free --label "MIT Test" --so-pin 87654321 --pin $PIN
 WORK=$(mktemp -d)
 openssl req -x509 -newkey rsa:2048 -nodes -keyout "$WORK/key.pem" -out "$WORK/cert.pem" -days 30 \
-    -subj "/CN=Testovací Podepisovatel/O=M.I.T. Consulting" \
+    -utf8 -subj "/CN=Testovací Podepisovatel/O=M.I.T. Consulting" \
     -addext "keyUsage=critical,nonRepudiation,digitalSignature" 2>/dev/null
 openssl pkcs8 -topk8 -nocrypt -in "$WORK/key.pem" -outform DER -out "$WORK/key.der"
 openssl x509 -in "$WORK/cert.pem" -outform DER -out "$WORK/cert.der"
@@ -32,6 +32,10 @@ sudo installer -pkg "$PKG" -target /
 sudo mkdir -p "$APP_DIR"
 echo "$SOFTHSM" | sudo tee "$APP_DIR/pkcs11-modules.conf" >/dev/null
 EXE="$APP_DIR/chrome-token-signing.app/Contents/MacOS/chrome-token-signing"
+codesign -dvv --entitlements - "$APP_DIR/chrome-token-signing.app" >"$OUT/codesign.txt" 2>&1 || true
+# The host logs only into an existing file
+mkdir -p ~/tmp
+: >~/tmp/chrome-signing.log
 
 python3 "$HERE/sign-test.py" "$EXE" --batch 5 >"$OUT/sign-test.log" 2>&1 &
 TEST=$!
@@ -53,6 +57,7 @@ answer() {
     return 1
 }
 
+set +e
 answer 1-certificate 'key code 36'
 sleep 2
 answer 2-pin 'keystroke "'$PIN'"' && osascript -e 'tell application "System Events" to key code 36'
@@ -62,5 +67,5 @@ screencapture -x "$OUT/3-progress.png"
 STATUS=0
 wait $TEST || STATUS=$?
 cat "$OUT/sign-test.log"
-log show --last 5m --predicate 'process == "chrome-token-signing"' --style compact >"$OUT/host.log" 2>/dev/null || true
+cp ~/tmp/chrome-signing.log "$OUT/host.log"
 exit $STATUS
