@@ -41,16 +41,18 @@ python3 "$HERE/sign-test.py" "$EXE" --batch 5 >"$OUT/sign-test.log" 2>&1 &
 TEST=$!
 
 # Waits for a window of the host, takes a screenshot and answers it with the given keys.
-# osascript needs the Accessibility permission, its errors go to osascript.log.
+# osascript needs the Accessibility permission, its output and errors go to osascript.log.
 answer() {
     local name=$1 keys=$2 host count
     for _ in $(seq 30); do
-        host=$(pgrep -n -f MacOS/chrome-token-signing)
-        count=$(osascript -e 'tell application "System Events" to count windows of (first process whose unix id is '"$host"')' 2>>"$OUT/osascript.log")
+        # Anchored, sign-test.py has the host path in its command line too
+        host=$(pgrep -n -f "^$EXE")
+        count=$(osascript -e 'tell application "System Events" to count windows of (first process whose unix id is '"${host:-0}"')' 2>>"$OUT/osascript.log")
+        echo "$name: host ${host:-none}, windows ${count:-?}" >>"$OUT/osascript.log"
         if [ -n "$count" ] && [ "$count" != 0 ]; then
             sleep 1
             screencapture -x "$OUT/$name.png"
-            osascript -e 'tell application "System Events" to tell (first process whose unix id is '"$host"') to set frontmost to true'                 -e 'tell application "System Events" to '"$keys" 2>>"$OUT/osascript.log"
+            osascript -e 'tell application "System Events" to tell (first process whose unix id is '"$host"') to set frontmost to true' -e 'tell application "System Events" to '"$keys" >>"$OUT/osascript.log" 2>&1
             return 0
         fi
         sleep 1
@@ -60,6 +62,7 @@ answer() {
     return 1
 }
 
+osascript -e 'tell application "System Events" to get UI elements enabled' >>"$OUT/osascript.log" 2>&1
 set +e
 answer 1-certificate 'key code 36'
 sleep 2
@@ -72,7 +75,7 @@ for _ in $(seq 60); do
     kill -0 $TEST 2>/dev/null || break
     sleep 1
 done
-pkill -f MacOS/chrome-token-signing
+pkill -f "^$EXE"
 
 STATUS=0
 wait $TEST || STATUS=$?
