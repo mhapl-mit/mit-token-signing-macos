@@ -17,6 +17,7 @@
  */
 
 #import "PINDialog.h"
+#import "DialogStyle.h"
 
 #import "BinaryUtils.h"
 #import "PKCS11CardManager.h"
@@ -199,6 +200,8 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
     IBOutlet NSSecureTextField *pinField;
     IBOutlet NSTextField *pinFieldLabel;
     IBOutlet NSProgressIndicator *progressBar;
+    NSTextField *headingField, *errorField;
+    NSArray<NSView *> *rows;
     unsigned long minPinLen;
 }
 
@@ -217,8 +220,18 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
             cancelButton.title = _L("cancel");
         }
         window.touchBar = [self makeTouchBar];
-        window.title = [NSString stringWithFormat:@"%@ — MIT Token signing", _L("PIN title")];
         pinFieldLabel.stringValue = label;
+        errorField = [NSTextField labelWithString:@""];
+        MITErrorText(errorField);
+        errorField.hidden = YES;
+        MITSecondaryText(nameLabel);
+        MITSecondaryText(messageField);
+        rows = @[nameLabel, messageField, errorField, pinFieldLabel, pinpad ? progressBar : pinField];
+        headingField = MITStyleDialog(window, rows, pinpad ? @[] : @[cancelButton, okButton], 460);
+        // The new content view has no focus, typing goes to the PIN field
+        if (!pinpad) {
+            window.initialFirstResponder = pinField;
+        }
     }
     return self;
 }
@@ -360,16 +373,18 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
             });
         }
 
+        dialog->headingField.stringValue = _L(hashes.size() > 1 ? "batch title" : "sign title");
+        dialog->messageField.stringValue = count;
+        dialog->messageField.hidden = count.length == 0;
         if (retriesLeft < 3) {
-            dialog->messageField.stringValue = [NSString stringWithFormat:@"%@%@ %u %@",
-                                                (isInitialCheck ? @"" : _L("incorrect PIN2")),
-                                                _L("tries left"),
-                                                retriesLeft, count];
-        }
-        else {
-            dialog->messageField.stringValue = count;
+            dialog->errorField.stringValue = [NSString stringWithFormat:@"%@%@ %u",
+                                              (isInitialCheck ? @"" : _L("incorrect PIN2")),
+                                              _L("tries left"),
+                                              retriesLeft];
+            dialog->errorField.hidden = NO;
         }
         isInitialCheck = false;
+        MITFitDialog(dialog->window, dialog->rows, dialog->pinFieldLabel);
 
         [NSApp activateIgnoringOtherApps:YES];
         NSModalResponse response = [NSApp runModalForWindow:dialog->window];
@@ -431,14 +446,11 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
     [signDialog setPinLength:token];
     signDialog->nameLabel.stringValue = name;
     // Must not look like the token PIN dialog, the PINs usually differ
-    signDialog->window.title = [NSString stringWithFormat:@"%@ — MIT Token signing", _L("signature PIN title")];
+    signDialog->headingField.stringValue = _L("signature PIN title");
     signDialog->messageField.stringValue = _L("signature PIN info");
     signDialog->messageField.textColor = NSColor.systemOrangeColor;
-    signDialog->messageField.cell.wraps = YES;
-    signDialog->messageField.cell.scrollable = NO;
-    signDialog->messageField.lineBreakMode = NSLineBreakByWordWrapping;
-    signDialog->messageField.preferredMaxLayoutWidth = NSWidth(signDialog->messageField.frame);
     signDialog->pinFieldLabel.font = [NSFont boldSystemFontOfSize:NSFont.systemFontSize];
+    MITFitDialog(signDialog->window, signDialog->rows, signDialog->pinFieldLabel);
     [NSApp activateIgnoringOtherApps:YES];
     NSModalResponse signResult = [NSApp runModalForWindow:signDialog->window];
     [signDialog->window close];

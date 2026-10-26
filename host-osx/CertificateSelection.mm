@@ -17,6 +17,7 @@
  */
 
 #import "CertificateSelection.h"
+#import "DialogStyle.h"
 
 #import "BinaryUtils.h"
 #import "PKCS11CardManager.h"
@@ -126,10 +127,19 @@ static NSTouchBarItemIdentifier touchBarItemSegmentId = @"cz.mit-consulting.chro
         }
 
         window.touchBar = [self makeTouchBar];
-        window.title = _L("select certificate");
         cancelButton.title = _L("cancel");
         okButton.title = _L("select");
         warningLabel.stringValue = _L("cert info");
+        MITSecondaryText(warningLabel);
+        // As high as the certificates, a token rarely has more than a few
+        NSScrollView *list = certificateSelection.enclosingScrollView;
+        certificateSelection.rowHeight = 24;
+        certificateSelection.usesAlternatingRowBackgroundColors = NO;
+        [list.heightAnchor constraintEqualToConstant:NSHeight(certificateSelection.headerView.frame)
+            + MIN(MAX(certificates.count, 1), 5) * (certificateSelection.rowHeight + certificateSelection.intercellSpacing.height) + 4].active = YES;
+        NSArray<NSView *> *rows = @[warningLabel, list];
+        MITStyleDialog(window, rows, @[cancelButton, okButton], 560).stringValue = _L("select certificate");
+        MITFitDialog(window, rows, list);
         [[certificateSelection tableColumnWithIdentifier:@"CN"].headerCell setStringValue:_L("certificate")];
         [[certificateSelection tableColumnWithIdentifier:@"type"].headerCell setStringValue:_L("type")];
         [[certificateSelection tableColumnWithIdentifier:@"validTo"].headerCell setStringValue:_L("valid to")];
