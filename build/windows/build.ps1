@@ -41,7 +41,7 @@ foreach ($platform in "x86", "x64") {
     & "$wix\candle.exe" -nologo host-windows\chrome-token-signing.wxs "-dVERSION=$version" "-dPlatform=$platform" -out "dist\chrome-token-signing.$platform.wixobj"
     if ($LASTEXITCODE) { throw "candle failed" }
     & "$wix\light.exe" -nologo -out "dist\mit-token-signing_$version.$platform.msi" "dist\chrome-token-signing.$platform.wixobj" `
-        -ext WixUIExtension -dWixUILicenseRtf=LICENSE.LGPL.rtf -dWixUIDialogBmp=host-windows/dlgbmp.bmp "-dPlatform=$platform"
+        -ext WixUIExtension "-dWixUILicenseRtf=LICENSE.LGPL.rtf" "-dWixUIDialogBmp=host-windows/dlgbmp.bmp" "-dPlatform=$platform"
     if ($LASTEXITCODE) { throw "light failed" }
     Remove-Item "dist\chrome-token-signing.$platform.wixobj", "dist\mit-token-signing_$version.$platform.wixpdb" -ErrorAction SilentlyContinue
     Write-Host "Built dist\mit-token-signing_$version.$platform.msi"

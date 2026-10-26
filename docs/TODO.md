@@ -5,11 +5,10 @@
 - [ ] **Chrome Web Store:** vydat novou verzi rozšíření 1.1.0 (`signBatch()`).
       Stávající položka: https://chromewebstore.google.com/detail/mit-consulting-token-sign/hkckiflbaedpdigcjoeiacmfnlncpeoj
       Zip ze složky `extension/` (bez starých `rozsireni_*.zip`), ID zůstává díky `key` v manifestu.
-- [ ] **Microsoft Edge Add-ons:** vytvořit a zaregistrovat nový doplněk
-      (Partner Center, https://partner.microsoft.com/dashboard/microsoftedge/).
-      Edge přidělí doplňku vlastní ID – to je nutné doplnit do `allowed_origins`
-      v manifestech nativního hosta (`cz.mit.consulting.json` pro Windows, Linux a macOS)
-      a vydat nové balíčky hosta.
+- [ ] **Microsoft Edge Add-ons:** vydat novou verzi 1.1.0 stávajícího doplňku
+      https://microsoftedge.microsoft.com/addons/detail/mit-consulting-token-s/ajndpmmgagjlfgoegeadcgkiehlbcinl
+      (Partner Center, https://partner.microsoft.com/dashboard/microsoftedge/), stejný zip
+      jako pro Chrome. ID je už v `allowed_origins` manifestů hosta.
 - [ ] ERMS přepnout na `signBatch()` až po rozšíření nové verze k uživatelům,
       se zálohou na dosavadní cyklus `sign()` (viz README).
 
@@ -29,12 +28,10 @@
   na Windows a Linuxu se pak oba PINy zadávají v jednom dialogu, na macOS ve dvou po sobě.
   Odmítnutý pokus stojí jeden pokus QPINu, zkouší se jen jednou na certifikát.
 - [ ] Windows: MSI 1.2.0 (WiX Toolset 3), otestovat dávku s eTokenem.
-- [ ] macOS: SIGN_BATCH je napsaný (jeden PIN, okno s průběhem), ale zatím nebyl přeložen
-      ani otestován – ověřit na Macu.
-- [ ] macOS: dialogy (výběr certifikátu, PIN) ve stejném vzhledu jako Linux (`host-linux/DialogStyle.h`)
-      a Windows (`host-windows/BatchPinDialog.*`), až bude Mac na ověření: titulek okna jen
-      „MIT Token signing“, velký tučný nadpis vlevo a logo MIT (výška 36 bodů) vpravo nahoře,
-      jméno a počet dokumentů šedě, chyba červeně tučně, pole přes celou šířku, tlačítka
-      vpravo v šedé patičce s dělicí čarou, hlavní tlačítko modré.
-- [ ] macOS: skript pro sestavení pro kolegu (bez programování).
+- [x] macOS: SIGN_BATCH přeložen a otestován na Macu v GitHub Actions s tokenem SoftHSM
+      (`host-test/macos-ui-test.sh`, 5 podpisů ověřeno), dialogy ve stejném vzhledu jako
+      Windows a Linux. Repozitář `mhapl-mit/mit-token-signing-macos` je jen kopie kódu bez
+      `.pem`/`.crx` pro sestavení na Macu (lokální větev `github-snapshot`).
+- [ ] macOS: ověřit se skutečnou kartou na Macu kolegy (PIN, QPIN, pinpad, okno s průběhem).
+- [x] macOS: skript pro sestavení pro kolegu `build/macos/build.sh` (jen Xcode z App Store).
 - [ ] macOS: verze s CryptoTokenKit.
