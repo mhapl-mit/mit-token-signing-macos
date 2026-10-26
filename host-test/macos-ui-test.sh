@@ -40,19 +40,27 @@ mkdir -p ~/tmp
 python3 "$HERE/sign-test.py" "$EXE" --batch 5 >"$OUT/sign-test.log" 2>&1 &
 TEST=$!
 
-# Waits for a window of the host, takes a screenshot and answers it with the given keys.
-# osascript needs the Accessibility permission, its output and errors go to osascript.log.
+UI="$WORK/macos-ui"
+swiftc -O "$HERE/macos-ui.swift" -o "$UI"
+
+# Waits for a window of the host, takes a screenshot, clicks its title bar to activate it
+# and runs the given macos-ui commands, e.g. "type 1234" "return"
 answer() {
-    local name=$1 keys=$2 host count
+    local name=$1 host geometry x y width height
+    shift
     for _ in $(seq 30); do
         # Anchored, sign-test.py has the host path in its command line too
         host=$(pgrep -n -f "^$EXE")
-        count=$(osascript -e 'tell application "System Events" to count windows of (first process whose unix id is '"${host:-0}"')' 2>>"$OUT/osascript.log")
-        echo "$name: host ${host:-none}, windows ${count:-?}" >>"$OUT/osascript.log"
-        if [ -n "$count" ] && [ "$count" != 0 ]; then
+        if [ -n "$host" ] && geometry=$("$UI" window "$host"); then
+            read -r x y width height <<<"$geometry"
+            echo "$name: host $host, window $geometry" >>"$OUT/ui.log"
             sleep 1
             screencapture -x "$OUT/$name.png"
-            osascript -e 'tell application "System Events" to tell (first process whose unix id is '"$host"') to set frontmost to true' -e 'tell application "System Events" to '"$keys" >>"$OUT/osascript.log" 2>&1
+            "$UI" click $((x + width / 2)) $((y + 12))
+            for command in "$@"; do
+                # shellcheck disable=SC2086
+                "$UI" $command
+            done
             return 0
         fi
         sleep 1
@@ -62,11 +70,10 @@ answer() {
     return 1
 }
 
-osascript -e 'tell application "System Events" to get UI elements enabled' >>"$OUT/osascript.log" 2>&1
 set +e
-answer 1-certificate 'key code 36'
+answer 1-certificate return
 sleep 2
-answer 2-pin 'keystroke "'$PIN'"' && osascript -e 'tell application "System Events" to key code 36' 2>>"$OUT/osascript.log"
+answer 2-pin "type $PIN" return
 sleep 1
 screencapture -x "$OUT/3-progress.png"
 
