@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Chrome Token Signing Native Host
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+-->
+
+<!--
+"%WIX%\bin\candle.exe" chrome-token-signing.wxs -dVERSION=1.0.0
+"%WIX%\bin\light.exe" -out chrome-token-signing.msi chrome-token-signing.wixobj -ext WixUIExtension
+    -dWixUILicenseRtf=LICENSE.LGPL.rtf
+    -dWixUIDialogBmp=dlgbmp.bmp
+-->
+
+<?ifndef Platform ?>
+<?define Platform="x64" ?>
+<?endif ?>
+
+<?if $(var.Platform) = x64 ?>
+  <?define Win64 = "yes" ?>
+<?else ?>
+  <?define Win64 = "no" ?>
+<?endif ?>
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Name="MIT Token Signing" UpgradeCode="3e52954d-eee4-4dd8-a4f2-318521e3dbd9"
+      Id="*" Language="1033" Version="$(var.VERSION)" Codepage="1251" Manufacturer="M.I.T. Consulting, s.r.o.">
+    <Package Platform="$(var.Platform)" Keywords="Installer" InstallerVersion="405" Compressed="yes"/>
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high"/>
+    <Icon Id="Icon.ico" SourceFile="host-windows\icon_mit.ico"/>
+    <Property Id="ARPPRODUCTICON" Value="Icon.ico"/>
+    <Property Id="FORCEINSTALL" Value="1"/>
+    <Property Id="CHROMEINSTALL" Value="1"/>
+    <Property Id="EDGEINSTALL" Value="1"/>
+    <Property Id="EDGEFORCEINSTALL" Value="1"/>
+    <Property Id="FIREFOXINSTALL" Value="1"/>
+    <!-- https://github.com/open-eid/windows-installer/blob/master/FirefoxActionWix/README.md -->
+    <Binary Id="FirefoxAction.CA.dll" SourceFile="host-windows\FirefoxAction.CA.dll" />
+    <CustomAction Id="ExtensionSettingsFirefox" Return="check" Execute="firstSequence"
+      BinaryKey="FirefoxAction.CA.dll" DllEntry="ExtensionSettingsInstall" />
+    <CustomAction Id="ExtensionSettingsNoFirefox" Return="check" Execute="firstSequence"
+      BinaryKey="FirefoxAction.CA.dll" DllEntry="ExtensionSettingsRemove" />
+    <CustomAction Id="ExtensionSettingsRemove" Return="check" Execute="firstSequence"
+      BinaryKey="FirefoxAction.CA.dll" DllEntry="ExtensionSettingsRemove" />
+    <Property Id="EXTENSIONSETTINGS_URL" Value="https://addons.mozilla.org/firefox/downloads/latest/token-signing2/latest.xpi" />
+    <Property Id="EXTENSIONSETTINGS_UUID" Value="{443830f0-1fff-4f9a-aa1e-444bafbc7319}" />
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage=
+      "A newer version of [ProductName] is already installed. If you are trying to downgrade, please uninstall the newer version first."/>
+    <Condition Message="[ProductName] requires Windows 7 or higher.">
+      <![CDATA[Installed OR (VersionNT >= 601)]]>
+    </Condition>
+    <UIRef Id="WixUI_Minimal" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id='ProgramFilesFolder'>
+        <Directory Id="APPLICATIONFOLDER" Name="MIT Token Signing">
+          <Component Id="Application" Guid="85baa771-7c73-49bb-b546-ab6a4520d258" Win64="no">
+            <File Source="host-windows/Release/chrome-token-signing.exe"/>
+          </Component>
+
+
+          <!--Important to extension be able to communicate with native client-->
+          <Component Id="ChromeEdge" Transitive="yes" >
+            <Condition><![CDATA[(CHROMEINSTALL = 1 OR EDGEINSTALL = 1)]]></Condition>
+            <File Source="host-windows/cz.mit.consulting.json"/>
+            <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]cz.mit.consulting.json'
+                Key='SOFTWARE\Google\Chrome\NativeMessagingHosts\cz.mit.consulting'/>
+          </Component>
+
+          <!--CHROME EXTENSTION COMPONENT - install chrome extension via registry-->
+
+          <!-- <Component Id="Chrome" Transitive="yes" >
+            <Condition><![CDATA[(CHROMEINSTALL = 1)]]></Condition>
+            <RegistryValue Root='HKLM' Type='string' Name="update_url"
+                Key='SOFTWARE\Google\Chrome\Extensions\hkckiflbaedpdigcjoeiacmfnlncpeoj'
+                Value='https://clients2.google.com/service/update2/crx'/>
+          </Component> -->
+
+
+          <!--EDGE EXTENSTION COMPONENT - install edge extension via registry-->
+          <!-- <Component Id="Edge" Transitive="yes" >
+            <Condition><![CDATA[(EDGEINSTALL = 1)]]></Condition>
+            <RegistryValue Root='HKLM' Type='string' Name="update_url"
+                Key='Software\Microsoft\Edge\Extensions\ajndpmmgagjlfgoegeadcgkiehlbcinl'
+                Value='https://edge.microsoft.com/extensionwebstorebase/v1/crx'/>
+          </Component> -->
+
+
+          <!-- FIREFOX-->
+          
+          <!-- <Component Id="FirefoxApplication" Guid="8c52d631-7da9-46d3-89c6-8248f94fa25c" Transitive="yes" >
+            <Condition><![CDATA[(FIREFOXINSTALL = 1)]]></Condition>
+            <File Source="host-windows/cz.mit.consulting.firefox.json"/>
+          </Component> -->
+
+
+          <!-- Pokud chceme zavest group policy (uzivatel nebude moct extension vypnout) odkomotuj tyhle rady + Componenty-->
+          <!-- <Component Id="ForceInstall" Guid="b02ebb46-a515-4821-82af-29f8c6073544" Win64="no" Transitive="yes">
+            <Condition><![CDATA[(FORCEINSTALL = 1 AND CHROMEINSTALL = 1)]]></Condition>
+            <RegistryValue Root='HKLM' Type='string' Name="56789"
+                Key='SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist'
+                Value='hkckiflbaedpdigcjoeiacmfnlncpeoj'/>
+          </Component>
+          <Component Id="EdgeForceInstall" Guid="00ced5f1-1b35-4b76-be1e-cbe1784aac88" Win64="no" Transitive="yes">
+            <Condition><![CDATA[(EDGEFORCEINSTALL = 1 AND EDGEINSTALL = 1)]]></Condition>
+            <RegistryValue Root='HKLM' Type='string' Name="56789"
+                Key='SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist'
+                Value='ajndpmmgagjlfgoegeadcgkiehlbcinl'/>
+          </Component> -->
+        </Directory>
+      </Directory>
+
+      <!-- FIREFOX-->
+      <!-- <Component Id="Firefox" Guid="60c6e502-529b-4d28-9e92-4cdbf1176afb" Win64="$(var.Win64)" Transitive="yes" >
+        <Condition><![CDATA[(FIREFOXINSTALL = 1)]]></Condition>
+        <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]cz.mit.consulting.firefox.json'
+            Key='SOFTWARE\Mozilla\NativeMessagingHosts\cz.mit.consulting' />
+      </Component> -->
+    </Directory>
+
+    <InstallExecuteSequence>
+      <!-- Install/Upgrade/Modify/Repair with FIREFOX support -->
+      <Custom Action="ExtensionSettingsFirefox" Before="WriteRegistryValues">FIREFOXINSTALL=1 AND NOT ((REMOVE="ALL") AND (NOT UPGRADINGPRODUCTCODE))</Custom>
+      <!-- Install/Upgrade/Modify/Repair without FIREFOX support -->
+      <Custom Action="ExtensionSettingsNoFirefox" Before="InstallFinalize">NOT (FIREFOXINSTALL=1) AND NOT ((REMOVE="ALL") AND (NOT UPGRADINGPRODUCTCODE))</Custom>
+      <!-- Package remove -->
+      <Custom Action="ExtensionSettingsRemove" Before="InstallFinalize">(REMOVE="ALL") AND (NOT UPGRADINGPRODUCTCODE)</Custom>
+    </InstallExecuteSequence>
+
+    <Feature Id="Install" Level="1" Title="MIT Token Signing" Display="expand" ConfigurableDirectory="APPLICATIONFOLDER">
+      <ComponentRef Id="Application"/>
+      <!-- <ComponentRef Id="ForceInstall"/> -->
+      <!-- <ComponentRef Id="Firefox"/>
+      <ComponentRef Id="FirefoxApplication"/> -->
+      <ComponentRef Id="ChromeEdge"/>
+      <!-- <ComponentRef Id="Chrome"/>
+      <ComponentRef Id="Edge"/> -->
+      <!-- <ComponentRef Id="EdgeForceInstall"/> -->
+    </Feature>
+  </Product>
+</Wix>

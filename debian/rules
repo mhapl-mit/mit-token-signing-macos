@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export QT_SELECT=5
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/buildflags.mk
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	-$(MAKE) -C host-linux clean
+
+override_dh_auto_build:
+	$(MAKE) -C host-linux
+
+override_dh_auto_install:
+	$(MAKE) -C host-linux/ -f Makefile install INSTALL_ROOT=$(CURDIR)/debian/mit-token-signing
+
+# Protocol smoke test runs on the installed package, see build/linux/package.sh
+override_dh_auto_test:

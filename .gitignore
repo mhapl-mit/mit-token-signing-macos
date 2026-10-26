@@ -1,0 +1,27 @@
+/host-windows/Debug
+/host-windows/Release
+/host-windows/ipch
+*.opensdf
+*.sdf
+*.suo
+*.user
+*.o
+*.msi
+*.wixobj
+*.wixpdb
+*out/
+*~
+/host-test/*.pyc
+/extension-*.zip
+/*.tar.gz
+/host-osx/build
+/host-osx/chrome-token-signing.xcodeproj/project.xcworkspace/
+/host-osx/chrome-token-signing.xcodeproj/xcuserdata/
+/.idea/
+
+# built extension packages
+*.xpi
+/extension/*.zip
+__pycache__/
+/dist/
+/host-windows/chrome-t.*/

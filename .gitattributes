@@ -1,0 +1,7 @@
+# Scripts and makefiles run on macOS and Linux need LF line endings
+*.sh text eol=lf
+*.command text eol=lf
+GNUmakefile text eol=lf
+host-osx/Makefile text eol=lf
+debian/* text eol=lf
+build/linux/Dockerfile text eol=lf

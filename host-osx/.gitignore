@@ -1,0 +1,5 @@
+/openssl
+/tmp
+/tmp_*
+/target
+*.pkg

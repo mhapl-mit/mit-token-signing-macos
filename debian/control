@@ -1,0 +1,20 @@
+Source: mit-token-signing
+Section: web
+Priority: optional
+Maintainer: M.I.T. Consulting, s.r.o. <mhapl@mit-consulting.cz>
+Build-Depends:
+ qtbase5-dev,
+ debhelper (>= 10),
+ libpcsclite-dev,
+ pkg-config
+Standards-Version: 3.9.8
+Homepage: https://chromewebstore.google.com/detail/mit-consulting-token-sign/hkckiflbaedpdigcjoeiacmfnlncpeoj
+
+Package: mit-token-signing
+Architecture: any
+Depends: pcscd, ${shlibs:Depends}, ${misc:Depends}
+Recommends: opensc-pkcs11
+Description: M.I.T. Consulting Token signing native messaging host
+ Native messaging host for the M.I.T. Consulting Token signing extension
+ in Chrome, Chromium and Edge. Signs with certificates on smart cards and
+ tokens through PKCS#11 modules (eObcanka, I.CA, SafeNet eToken, OpenSC).

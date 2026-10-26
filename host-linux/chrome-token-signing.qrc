@@ -1,0 +1,5 @@
+<RCC>
+<qresource prefix="/">
+<file alias="chrome-token-signing.png">../extension/icon128.png</file>
+</qresource>
+</RCC>

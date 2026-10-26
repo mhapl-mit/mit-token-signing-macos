@@ -1,0 +1,41 @@
+{
+  "name": "M.I.T. Consulting Token signing",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2uNWu8tZ1WbtrCBAQhEV3/D6QWmZLdHo2zL6u6krXFxeBw1BApJNP1+Mrjk46DL1XHaM9qAw7OcGdPA1/b2xIxZKoZMceQysqdztb4t+TguGrk09SVSI4JRuijSUUz+zS3vk923xPf+HnpulvHKUXrMuwQLOsfHMtFmf6R9/p1jpwC8XmuRdzTxTCEGPPkxYLidoCaOKWwiOY7mHvXytv+/Fy+VGKOU3zHit2mW1hpTzvgzQkdKy+GuwDaMjWUjBeieAghyuy1se5IRe3kCzsBe8NfNYHfjNRhDVIjbQ7Dzs8Sa9liusGQEQhALX+mLY0CyWdCsee6WCnm/VDIT9KwIDAQAB",
+  "version": "1.1.0",
+  "manifest_version": 3,
+  "default_locale": "cs",
+  "description": "__MSG_extenstionDescription__",
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*",
+        "file:///*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_end",
+      "all_frames": true
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "nativeMessaging"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "page.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+    "name": "cz.mit.consulting",
+    "description": "Give signatures with your eID on the web",
+    "path": "/Library/Application Support/MIT Token Signing/chrome-token-signing.app/Contents/MacOS/chrome-token-signing",
+    "type": "stdio",
+    "allowed_origins": [
+        "chrome-extension://hkckiflbaedpdigcjoeiacmfnlncpeoj/",
+        "chrome-extension://ajndpmmgagjlfgoegeadcgkiehlbcinl/"
+    ]
+}

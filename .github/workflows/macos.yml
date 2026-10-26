@@ -1,0 +1,24 @@
+# macOS build on GitHub Actions, the repository on GitHub is only a mirror for builds on a Mac.
+# Builds the same way as a colleague with build/macos/build.sh and keeps the package and the log.
+name: macOS
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: sh build/macos/build.sh ${{ github.run_number }} 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-build
+          path: |
+            build.log
+            dist/*.pkg

