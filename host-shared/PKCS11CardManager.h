@@ -174,8 +174,14 @@ public:
                 _log("Failed to get slot info at SLOT ID %lu '%s', skiping", slotID, e.what());
                 continue;
             }
+            // An uninitialized or unknown token in one slot must not hide the tokens in the others
             CK_SESSION_HANDLE session = 0;
-            C(OpenSession, slotID, CKF_SERIAL_SESSION, nullptr, nullptr, &session);
+            try {
+                C(OpenSession, slotID, CKF_SERIAL_SESSION, nullptr, nullptr, &session);
+            } catch(const BaseException &e) {
+                _log("Failed to open session at SLOT ID %lu '%s', skiping", slotID, e.what());
+                continue;
+            }
 
             for (CK_OBJECT_HANDLE obj: findObject(session, CKO_CERTIFICATE)) {
                 result.push_back({ std::string((const char*)tokenInfo.label, sizeof(tokenInfo.label)), slotID,
