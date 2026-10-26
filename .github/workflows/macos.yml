@@ -20,6 +20,8 @@ jobs:
       - name: Build
         run: sh build/macos/build.sh ${{ github.run_number }} 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
         shell: bash
+      - name: Test with a SoftHSM token
+        run: bash host-test/macos-ui-test.sh dist/*.pkg ui-test
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -27,3 +29,4 @@ jobs:
           path: |
             build.log
             dist/*.pkg
+            ui-test
