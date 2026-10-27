@@ -182,9 +182,10 @@ static NSTouchBarItemIdentifier touchBarItemGroupId = @"cz.mit-consulting.chrome
 static NSTouchBarItemIdentifier touchBarItemOkId = @"cz.mit-consulting.chrome-token-signing.touchbar.ok";
 static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrome-token-signing.touchbar.cancel";
 
-@interface PINPanel () <NSTouchBarDelegate>
+@interface PINPanel () <NSTouchBarDelegate, NSTextFieldDelegate>
 - (void)setPinLength:(const PKCS11CardManager::Token &)token;
 - (void)offerSignaturePin:(BOOL)same;
+- (void)updateOk;
 - (BOOL)sameChecked;
 + (std::string)signaturePin:(const PKCS11CardManager::Token &)token name:(NSString *)name retry:(BOOL)retry;
 + (std::vector<std::vector<unsigned char>>)signBatch:(const PKCS11CardManager &)pkcs11 token:(const PKCS11CardManager::Token &)token
@@ -606,7 +607,7 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
     if (pin2Field.enabled && sender) {
         [window makeFirstResponder:pin2Field];
     }
-    [self controlTextDidChange:nil];
+    [self updateOk];
 }
 
 - (IBAction)cancelClicked:(id)sender
@@ -625,6 +626,12 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
 }
 
 - (void)controlTextDidChange:(NSNotification*)notification;
+{
+    [self updateOk];
+}
+
+// OK needs PINs of the minimal length, the second one only without the box that they are the same
+- (void)updateOk
 {
     BOOL needPin2 = pin2Field && !pin2Field.hidden && ![self sameChecked];
     BOOL enabled = pinField.stringValue.length >= minPinLen && (!needPin2 || pin2Field.stringValue.length >= minPinLen);
