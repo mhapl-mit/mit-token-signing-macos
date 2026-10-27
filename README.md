@@ -103,6 +103,20 @@ const signatures = typeof ts.signBatch === "function"
 The native message is `{"type": "SIGN_BATCH", "cert": ..., "hashes": [hex, ...], "hashtype", "lang", "info"}`,
 the response `{"signatures": [hex, ...]}`. The batch is all or nothing.
 
+## Install guide
+
+`web/install` is a static page that finds out what is missing for signing with a card in the
+current browser (Chrome or Edge, the extension, the native host and its version) and offers the
+installer for the user's OS. `web/install/token-signing-check.js` gives the same check to web
+applications (`TokenSigningCheck.detect()`, see the header of the file). The page has no inline
+scripts or styles, so it works under a strict Content Security Policy.
+
+    build/web/package.sh 1.2.0.13
+
+puts the page and the installers of that version (from `dist/`) under stable names into
+`dist/token-signing-install/` and `dist/mit-token-signing-install_<version>.zip`, to be served as
+a folder by ERMS and https://repos.mit-consulting.cz/token-sign/.
+
 ## Support
 Official builds are provided through official distribution point [id.ee](https://www.id.ee/en/article/install-id-software/). If you want support, you need to be using official builds.
 

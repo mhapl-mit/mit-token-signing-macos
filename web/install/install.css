@@ -1,0 +1,42 @@
+  :root {
+    --bg: #f3f3f3; --surface: #fff; --text: #1b1b1b; --muted: #5f5f5f; --line: #e1e1e1;
+    --accent: #0067c0; --accent-text: #fff; --ok: #0f7b0f; --err: #c42b1c; --warn: #9d5d00; --todo: #8a8a8a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1c; --surface: #272727; --text: #f0f0f0; --muted: #b0b0b0; --line: #3a3a3a;
+      --accent: #4cc2ff; --accent-text: #000; --ok: #6ccb5f; --err: #ff99a4; --warn: #fce100; --todo: #8a8a8a;
+    }
+    .logo { background: #fff; border-radius: 6px; padding: 4px; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 "Segoe UI", -apple-system, BlinkMacSystemFont, Ubuntu, "Helvetica Neue", sans-serif; }
+  main { max-width: 720px; margin: 32px auto; padding: 0 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px 8px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0; }
+  .logo { height: 40px; }
+  .intro { color: var(--muted); padding: 0 24px 8px; margin: 0; }
+  ol { list-style: none; margin: 0; padding: 0; }
+  li.step { display: grid; grid-template-columns: 32px 1fr; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--line); }
+  .mark { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+          font-weight: 700; color: #fff; background: var(--todo); }
+  .ok .mark { background: var(--ok); }
+  .missing .mark { background: var(--err); }
+  .update .mark { background: var(--warn); }
+  .update .state { color: var(--warn); font-weight: 600; }
+  .step h2 { font-size: 16px; font-weight: 600; margin: 2px 0 2px; }
+  .step p { margin: 4px 0; }
+  .state { color: var(--muted); }
+  .missing .state { color: var(--err); font-weight: 600; }
+  .ok .state { color: var(--ok); }
+  .how { display: none; }
+  .missing .how, .update .how, .always .how { display: block; }
+  .button { display: inline-block; margin: 8px 8px 4px 0; padding: 7px 18px; border-radius: 5px; border: 1px solid var(--accent);
+            background: var(--accent); color: var(--accent-text); text-decoration: none; font-weight: 600; cursor: pointer; font: inherit; }
+  .button.secondary { background: transparent; color: var(--accent); }
+  code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 14px; }
+  footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+           padding: 14px 24px; border-top: 1px solid var(--line); background: var(--bg); color: var(--muted); font-size: 13px; }
+  .done { padding: 16px 24px; border-top: 1px solid var(--line); color: var(--ok); font-weight: 600; display: none; }

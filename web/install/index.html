@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Instalace MIT Token signing</title>
+<link rel="icon" href="logo.png">
+<!--
+Install guide for signing with a card in the browser. Shows what is missing in this browser:
+a supported browser, the extension, the native host or the card software, with the installer
+for this OS. The installers and version.json lie next to this page (build/web/package.sh).
+-->
+<link rel="stylesheet" href="install.css">
+</head>
+<body>
+<main>
+<div class="card">
+  <header>
+    <h1>Podpis kartou v prohlížeči</h1>
+    <img class="logo" src="logo.png" alt="M.I.T. Consulting">
+  </header>
+  <p class="intro">Pro podpis čipovou kartou nebo tokenem potřebujete tyto čtyři věci. Stránka sama zjistí, co vám chybí.</p>
+  <ol>
+    <li class="step" id="browser">
+      <div class="mark">1</div>
+      <div>
+        <h2>Prohlížeč Google Chrome nebo Microsoft Edge</h2>
+        <p class="state">Zjišťuji…</p>
+        <div class="how">
+          <p>Podpis kartou funguje v prohlížečích Google Chrome a Microsoft Edge. Nainstalujte si jeden z nich
+             a otevřete v něm tuto stránku znovu.</p>
+          <a class="button" href="https://www.google.com/chrome/" target="_blank" rel="noopener">Stáhnout Chrome</a>
+          <a class="button secondary" href="https://www.microsoft.com/edge" target="_blank" rel="noopener">Stáhnout Edge</a>
+        </div>
+      </div>
+    </li>
+    <li class="step" id="extension">
+      <div class="mark">2</div>
+      <div>
+        <h2>Rozšíření M.I.T. Consulting Token signing</h2>
+        <p class="state">Zjišťuji…</p>
+        <div class="how">
+          <p>Otevřete obchod s rozšířeními, klikněte na <b>Přidat do prohlížeče</b> a potom tuto stránku obnovte.</p>
+          <a class="button" id="store" href="#" target="_blank" rel="noopener">Otevřít obchod s rozšířeními</a>
+          <div id="how-edge" hidden>
+            <p>V Edge se rozšíření instaluje z Internetového obchodu Chrome: v obchodě nahoře klikněte na
+               <b>Povolit rozšíření z jiných obchodů</b>, potvrďte <b>Povolit</b> a pak klikněte na <b>Získat</b>.</p>
+            <p>Máte-li v Edge starší rozšíření M.I.T. Consulting Token signing z obchodu Microsoft Edge, odeberte ho
+               (<code>edge://extensions</code> → <b>Odebrat</b>), jinak by se podpis spouštěl dvakrát.</p>
+          </div>
+        </div>
+      </div>
+    </li>
+    <li class="step" id="host">
+      <div class="mark">3</div>
+      <div>
+        <h2>Program MIT Token signing</h2>
+        <p class="state">Zjišťuji…</p>
+        <div class="how">
+          <p>Program zprostředkuje rozšíření přístup ke kartě.</p>
+          <a class="button" id="download" href="#">Stáhnout program</a>
+          <div id="how-windows" hidden>
+            <p>Otevřete stažený soubor a projděte instalaci. Pak klikněte na <b>Zkontrolovat znovu</b>.</p>
+          </div>
+          <div id="how-macos" hidden>
+            <p>Otevřete stažený soubor a projděte instalaci. Pokud macOS hlásí, že soubor nelze otevřít,
+               otevřete <b>Nastavení systému → Soukromí a zabezpečení</b>, dole klikněte na <b>Přesto otevřít</b>
+               a zadejte heslo k Macu. Pak klikněte na <b>Zkontrolovat znovu</b>.</p>
+          </div>
+          <div id="how-linux" hidden>
+            <p>Balíček je pro Ubuntu 22.04 a novější a Debian 12 a novější. Nainstalujte ho v terminálu:</p>
+            <p><code>sudo apt install ~/Stažené/mit-token-signing_amd64.deb</code></p>
+            <p>(V anglickém systému je složka <code>~/Downloads</code>.)</p>
+            <p>Pak klikněte na <b>Zkontrolovat znovu</b>.</p>
+          </div>
+        </div>
+      </div>
+    </li>
+    <li class="step always" id="card">
+      <div class="mark">4</div>
+      <div>
+        <h2>Software ke kartě</h2>
+        <p class="state">Tento krok stránka ověřit neumí.</p>
+        <div class="how">
+          <p>Na počítači musí být program od vydavatele vaší karty nebo tokenu, se kterým karta už funguje:</p>
+          <p>
+            <a href="https://www.ica.cz/secure-store" target="_blank" rel="noopener">I.CA SecureStore</a> ·
+            <a href="https://proid.cz/ke-stazeni/" target="_blank" rel="noopener">ProID+ (Monet+)</a> ·
+            <a href="https://www.postsignum.cz/media_usb_tokeny_cip_karty.html" target="_blank" rel="noopener">PostSignum</a>
+          </p>
+          <p class="state">Na Linuxu dále balíčky <code>pcscd</code> a pro karty bez programu výrobce <code>opensc</code>
+             (instalace programu MIT Token signing je doinstaluje sama).</p>
+        </div>
+      </div>
+    </li>
+  </ol>
+  <div class="done" id="done">Vše potřebné je nainstalované, můžete podepisovat.</div>
+  <footer>
+    <span id="versions"></span>
+    <button class="button" id="again" type="button">Zkontrolovat znovu</button>
+  </footer>
+</div>
+</main>
+<script src="token-signing-check.js"></script>
+<script src="install.js"></script>
+</body>
+</html>

@@ -45,9 +45,9 @@ static wstring replace(wstring text, const wstring &key, const wstring &value)
 }
 
 // What is known about the digital signature PIN of the certificate key: it is the same as the token PIN,
-// or it differs and the next batch asks for both PINs in one dialog
+// it differs, or the key has none. It is the initial state of the box in the token PIN dialog.
 static const wchar_t *SIGNATURE_PIN_KEY = L"Software\\MIT Token Signing\\SignaturePin";
-enum SignaturePinMemory { SIGNATURE_PIN_UNKNOWN = 0, SIGNATURE_PIN_SEPARATE = 1, SIGNATURE_PIN_SAME = 2 };
+enum SignaturePinMemory { SIGNATURE_PIN_UNKNOWN = 0, SIGNATURE_PIN_SEPARATE = 1, SIGNATURE_PIN_SAME = 2, SIGNATURE_PIN_NONE = 3 };
 
 static wstring fingerprint(const vector<unsigned char> &cert)
 {
@@ -212,26 +212,28 @@ vector<vector<unsigned char>> BatchSigner::sign(const vector<unsigned char> &cer
 	const wstring count = replace(Labels::l10n.get("batch count"), L"@COUNT@", to_wstring(digests.size()));
 
 	// Keys with a digital signature PIN (e.g. ProID+Q, eToken 5110 CC) need it once per batch.
-	// Like the dialog of the Windows driver, the token PIN is tried first, it is often the same.
-	// Only when the token rejects it, the digital signature PIN is asked and the next batch asks
-	// for both PINs in one dialog. The token PIN is tried once per certificate, a rejected attempt
-	// counts against the digital signature PIN tries.
+	// PKCS#11 cannot tell before the token login whether the key has one, nor how many tries of it
+	// are left, so the token PIN dialog has a box that the digital signature PIN is the same and
+	// a field for it otherwise. The token PIN is tried only when the user leaves the box checked;
+	// when the token rejects it, a dialog asks for the digital signature PIN. The answer is the
+	// initial state of the box next time, keys without a digital signature PIN get no box.
 	const wstring id = fingerprint(cert);
 	const DWORD memory = rememberedSignaturePin(id);
-	const bool askBoth = memory == SIGNATURE_PIN_SEPARATE;
+	const bool askBoth = memory != SIGNATURE_PIN_NONE;
 	string signaturePin;
 	const char *tokenPin = nullptr;
+	bool same = memory == SIGNATURE_PIN_UNKNOWN || memory == SIGNATURE_PIN_SAME;
 	bool signaturePinUsed = false, signaturePinIsTokenPin = false;
 	auto signPin = [&](bool retry) -> string {
 		signaturePinUsed = true;
 		signaturePinIsTokenPin = false;
-		if (!retry && !signaturePin.empty())
-			return signaturePin;
-		if (!retry && memory != SIGNATURE_PIN_SEPARATE && tokenPin) {
-			_log("using the token PIN as digital signature PIN, known: %u", unsigned(memory));
+		if (!retry && same && tokenPin) {
+			_log("using the token PIN as digital signature PIN by the user");
 			signaturePinIsTokenPin = true;
 			return tokenPin;
 		}
+		if (!retry && !signaturePin.empty())
+			return signaturePin;
 		BatchPinRequest request;
 		request.title = APP_TITLE;
 		request.heading = Labels::l10n.get("signature PIN title");
@@ -239,6 +241,7 @@ vector<vector<unsigned char>> BatchSigner::sign(const vector<unsigned char> &cer
 		request.details = Labels::l10n.get("signature PIN info");
 		if (retry)
 			request.error = Labels::l10n.get("incorrect PIN2");
+		request.signaturePin = true;
 		request.label = Labels::l10n.get("signature PIN");
 		request.minPinLen = selected.minPinLen;
 		return BatchPinDialog::show(request);
@@ -257,11 +260,14 @@ vector<vector<unsigned char>> BatchSigner::sign(const vector<unsigned char> &cer
 		}
 		isInitialCheck = false;
 		request.label = label;
-		if (askBoth)
+		if (askBoth) {
+			request.sameLabel = Labels::l10n.get("signature PIN same");
+			request.same = same;
 			request.label2 = Labels::l10n.get("signature PIN");
+		}
 		request.minPinLen = selected.minPinLen;
 
-		string pin = BatchPinDialog::show(request, askBoth ? &signaturePin : nullptr);
+		string pin = BatchPinDialog::show(request, askBoth ? &signaturePin : nullptr, askBoth ? &same : nullptr);
 		if (pin.empty())
 			throw UserCancelledException();
 		signaturePinUsed = false;
@@ -272,11 +278,10 @@ vector<vector<unsigned char>> BatchSigner::sign(const vector<unsigned char> &cer
 				[&progress](size_t i) { progress.step(i); });
 			wipe(pin);
 			wipe(signaturePin);
-			if (signaturePinUsed) {
-				DWORD learned = signaturePinIsTokenPin ? SIGNATURE_PIN_SAME : SIGNATURE_PIN_SEPARATE;
-				if (learned != memory)
-					rememberSignaturePin(id, learned);
-			}
+			DWORD learned = !signaturePinUsed ? SIGNATURE_PIN_NONE :
+				signaturePinIsTokenPin ? SIGNATURE_PIN_SAME : SIGNATURE_PIN_SEPARATE;
+			if (learned != memory)
+				rememberSignaturePin(id, learned);
 			return signatures;
 		}
 		catch (const AuthenticationError &) {

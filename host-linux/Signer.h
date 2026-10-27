@@ -25,6 +25,7 @@
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
+#include <QCheckBox>
 #include <QDebug>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -55,6 +56,7 @@ class Signer: public QDialog {
         SignaturePinUnknown = 0,
         SignaturePinSeparate = 1,
         SignaturePinSame = 2,
+        SignaturePinNone = 3,
     };
 public:
     // Signs one or more hashes with one PIN entry. Returns "signature" for a single hash
@@ -118,20 +120,22 @@ public:
             return {{"signatures", list}};
         };
 
-        // Keys with a digital signature PIN need it once per batch. Like the dialog of the Windows
-        // driver, the token PIN is tried first, it is often the same. Only when the token rejects it,
-        // the digital signature PIN is asked and the next batch asks for both PINs in one dialog.
-        // The token PIN is tried once per certificate, a rejected attempt counts against the
-        // digital signature PIN tries.
+        // Keys with a digital signature PIN need it once per batch. PKCS#11 cannot tell before the
+        // token login whether the key has one, nor how many tries of it are left, so the PIN dialog
+        // has a box that the digital signature PIN is the same and a field for it otherwise. The
+        // token PIN is tried only when the user leaves the box checked; when the token rejects it,
+        // a dialog asks for the digital signature PIN. The answer is the initial state of the box
+        // next time, keys without a digital signature PIN get no box.
         QSettings settings(QStringLiteral("MIT Consulting"), QStringLiteral("mit-token-signing"));
         const QString signaturePinKey = QStringLiteral("SignaturePin/") + QCryptographicHash::hash(
             QByteArray::fromRawData((const char*)data.data(), int(data.size())), QCryptographicHash::Sha1).toHex();
         const int memory = settings.value(signaturePinKey, SignaturePinUnknown).toInt();
-        const bool askBoth = memory == SignaturePinSeparate && !selected.pinpad;
+        const bool askBoth = memory != SignaturePinNone && !selected.pinpad;
+        bool same = memory == SignaturePinUnknown || memory == SignaturePinSame;
 
         bool isInitialCheck = true;
         for (int retriesLeft = selected.retry; retriesLeft > 0; ) {
-            Signer dialog(Labels::l10n.get(digests.size() > 1 ? "batch title" : "sign title").c_str(), label, selected.minPinLen, selected.maxPinLen, selected.pinpad, askBoth);
+            Signer dialog(Labels::l10n.get(digests.size() > 1 ? "batch title" : "sign title").c_str(), label, selected.minPinLen, selected.maxPinLen, selected.pinpad, askBoth, same);
             if (retriesLeft < 3) {
                 dialog.errorLabel->show();
                 dialog.errorLabel->setText(QStringLiteral("%1%2 %3")
@@ -188,14 +192,14 @@ public:
 
             try {
                 bool signaturePinUsed = false, signaturePinIsTokenPin = false;
+                same = askBoth && dialog.sameBox->isChecked();
                 std::vector<std::vector<unsigned char>> signatures = signBatch(pkcs11, selected, digests,
-                    dialog.pin->text().toUtf8(), askBoth ? dialog.pin2->text().toUtf8() : QByteArray(),
-                    dialog.nameLabel->text(), memory != SignaturePinSeparate, signaturePinUsed, signaturePinIsTokenPin);
-                if (signaturePinUsed) {
-                    int learned = signaturePinIsTokenPin ? SignaturePinSame : SignaturePinSeparate;
-                    if (learned != memory)
-                        settings.setValue(signaturePinKey, learned);
-                }
+                    dialog.pin->text().toUtf8(), askBoth && !same ? dialog.pin2->text().toUtf8() : QByteArray(),
+                    dialog.nameLabel->text(), same, signaturePinUsed, signaturePinIsTokenPin);
+                int learned = !signaturePinUsed ? SignaturePinNone :
+                    signaturePinIsTokenPin ? SignaturePinSame : SignaturePinSeparate;
+                if (learned != memory)
+                    settings.setValue(signaturePinKey, learned);
                 return result(signatures);
             } catch (const AuthenticationBadInput &) {
             } catch (const AuthenticationError &) {
@@ -217,7 +221,7 @@ private:
     // the digital signature PIN dialog is shown in the UI thread when the key needs it
     static std::vector<std::vector<unsigned char>> signBatch(const PKCS11CardManager &pkcs11,
             const PKCS11CardManager::Token &selected, const std::vector<std::vector<unsigned char>> &digests,
-            const QByteArray &pin, const QByteArray &signaturePin, const QString &name, bool tryTokenPin,
+            const QByteArray &pin, const QByteArray &signaturePin, const QString &name, bool same,
             bool &signaturePinUsed, bool &signaturePinIsTokenPin) {
         QProgressDialog progress(Labels::l10n.get("signing").c_str(), Labels::l10n.get("cancel").c_str(), 0, int(digests.size()));
         progress.setWindowFlags(Qt::WindowStaysOnTopHint);
@@ -233,12 +237,12 @@ private:
         auto signPin = [&](bool retry) {
             signaturePinUsed = true;
             signaturePinIsTokenPin = false;
-            if (!retry && !signaturePin.isEmpty())
-                return std::string(signaturePin.constData(), size_t(signaturePin.size()));
-            if (!retry && tryTokenPin) {
+            if (!retry && same) {
                 signaturePinIsTokenPin = true;
                 return std::string(pin.constData(), size_t(pin.size()));
             }
+            if (!retry && !signaturePin.isEmpty())
+                return std::string(signaturePin.constData(), size_t(signaturePin.size()));
             std::string result;
             QMetaObject::invokeMethod(&progress, [&] {
                 Signer signDialog(Labels::l10n.get("signature PIN title").c_str(),
@@ -249,6 +253,10 @@ private:
                 signDialog.infoLabel->setStyleSheet(QStringLiteral(
                     "QLabel { background: #fff4ce; color: #5c4400; border: 1px solid #e0b000; padding: 6px; }"));
                 signDialog.infoLabel->show();
+                if (retry) {
+                    signDialog.errorLabel->setText(QString::fromStdString(Labels::l10n.get("incorrect PIN2")));
+                    signDialog.errorLabel->show();
+                }
                 signDialog.pinLabel->setText(QStringLiteral("<b>%1</b>").arg(signDialog.pinLabel->text().toHtmlEscaped()));
                 if (signDialog.exec() == QDialog::Accepted)
                     result = signDialog.pin->text().toUtf8().constData();
@@ -280,8 +288,10 @@ private:
         return std::vector<unsigned char>(bin.cbegin(), bin.cend());
     }
 
+    // withSignaturePin adds a box that the digital signature PIN is the token PIN, checked by same,
+    // and a field for it enabled without the box
     Signer(const QString &heading, const QString &label, unsigned long minPinLen, unsigned long maxPinLen, bool isPinpad,
-            bool withSignaturePin = false)
+            bool withSignaturePin = false, bool same = true)
         : nameLabel(new QLabel(this))
         , infoLabel(new QLabel(this))
         , pinLabel(new QLabel(this))
@@ -340,23 +350,37 @@ private:
             pin->setMaxLength(maxPinLen > 0 && maxPinLen < 64 ? int(maxPinLen) : 64);
             layout.content->addWidget(pin);
 
-            // Digital signature PIN in the same dialog, both PINs are required
+            // Digital signature PIN in the same dialog, required without the box that it is the token PIN
             if (withSignaturePin) {
+                sameBox = new QCheckBox(QString::fromStdString(Labels::l10n.get("signature PIN same")), this);
+                sameBox->setChecked(same);
                 pin2Label = new QLabel(QStringLiteral("<b>%1</b>").arg(
                     QString::fromStdString(Labels::l10n.get("signature PIN")).toHtmlEscaped()), this);
                 pin2 = new QLineEdit(this);
                 pin2->setEchoMode(QLineEdit::Password);
                 pin2->setMaxLength(pin->maxLength());
+                layout.content->addSpacing(4);
+                layout.content->addWidget(sameBox);
                 layout.content->addSpacing(8);
                 layout.content->addWidget(pin2Label);
                 layout.content->addWidget(pin2);
             }
             auto update = [=] {
-                ok->setEnabled(pin->text().size() >= int(minPinLen) && (!pin2 || pin2->text().size() >= int(minPinLen)));
+                bool needPin2 = pin2 && !sameBox->isChecked();
+                ok->setEnabled(pin->text().size() >= int(minPinLen) && (!needPin2 || pin2->text().size() >= int(minPinLen)));
             };
             connect(pin, &QLineEdit::textEdited, update);
-            if (pin2)
+            if (pin2) {
                 connect(pin2, &QLineEdit::textEdited, update);
+                auto toggle = [=] {
+                    bool enabled = !sameBox->isChecked();
+                    pin2->setEnabled(enabled);
+                    pin2Label->setEnabled(enabled);
+                    update();
+                };
+                connect(sameBox, &QCheckBox::toggled, toggle);
+                toggle();
+            }
 
             layout.footer->addWidget(buttons);
         }
@@ -364,6 +388,7 @@ private:
     }
 
     QLabel *nameLabel, *infoLabel, *pinLabel, *errorLabel, *pin2Label = nullptr;
+    QCheckBox *sameBox = nullptr;
     QDialogButtonBox *buttons = nullptr;
     QPushButton *ok = nullptr, *cancel = nullptr;
     QLineEdit *pin = nullptr, *pin2 = nullptr;

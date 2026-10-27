@@ -38,6 +38,7 @@ enum {
     SignaturePinUnknown = 0,
     SignaturePinSeparate = 1,
     SignaturePinSame = 2,
+    SignaturePinNone = 3,
 };
 
 @interface MaxNumberFormatter : NSFormatter
@@ -183,9 +184,12 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
 
 @interface PINPanel () <NSTouchBarDelegate>
 - (void)setPinLength:(const PKCS11CardManager::Token &)token;
-+ (std::string)signaturePin:(const PKCS11CardManager::Token &)token name:(NSString *)name;
+- (void)offerSignaturePin:(BOOL)same;
+- (BOOL)sameChecked;
++ (std::string)signaturePin:(const PKCS11CardManager::Token &)token name:(NSString *)name retry:(BOOL)retry;
 + (std::vector<std::vector<unsigned char>>)signBatch:(const PKCS11CardManager &)pkcs11 token:(const PKCS11CardManager::Token &)token
-    hashes:(const std::vector<std::vector<unsigned char>> &)hashes pin:(const std::string &)pin name:(NSString *)name;
+    hashes:(const std::vector<std::vector<unsigned char>> &)hashes pin:(const std::string &)pin
+    signaturePin:(const std::string &)signaturePin same:(BOOL)same name:(NSString *)name;
 + (std::vector<std::vector<unsigned char>>)signWithProgress:(const PKCS11CardManager &)pkcs11 token:(const PKCS11CardManager::Token &)token
     hashes:(const std::vector<std::vector<unsigned char>> &)hashes pin:(const std::string &)pin signPin:(const PKCS11CardManager::SignPin &)signPin;
 + (NSString *)fingerprint:(const std::vector<unsigned char> &)cert;
@@ -201,6 +205,9 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
     IBOutlet NSTextField *pinFieldLabel;
     IBOutlet NSProgressIndicator *progressBar;
     NSTextField *headingField, *errorField;
+    NSButton *sameBox;
+    NSTextField *pin2Label;
+    NSSecureTextField *pin2Field;
     NSArray<NSView *> *rows;
     unsigned long minPinLen;
 }
@@ -227,6 +234,20 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
         MITSecondaryText(nameLabel);
         MITSecondaryText(messageField);
         rows = @[nameLabel, messageField, errorField, pinFieldLabel, pinpad ? progressBar : pinField];
+        if (!pinpad) {
+            // The box that the digital signature PIN is the token PIN and a field for it otherwise,
+            // shown by offerSignaturePin
+            sameBox = [NSButton checkboxWithTitle:_L("signature PIN same") target:self action:@selector(sameToggled:)];
+            pin2Label = [NSTextField labelWithString:_L("signature PIN")];
+            pin2Label.font = [NSFont boldSystemFontOfSize:NSFont.systemFontSize];
+            pin2Field = [[NSSecureTextField alloc] init];
+            pin2Field.formatter = pinField.formatter;
+            pin2Field.delegate = self;
+            for (NSView *view in @[sameBox, pin2Label, pin2Field]) {
+                view.hidden = YES;
+            }
+            rows = [rows arrayByAddingObjectsFromArray:@[sameBox, pin2Label, pin2Field]];
+        }
         headingField = MITStyleDialog(window, rows, pinpad ? @[] : @[cancelButton, okButton], 460);
         // The new content view has no focus, typing goes to the PIN field
         if (!pinpad) {
@@ -318,6 +339,14 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
         return @{@"signatures": list, @"result": @"ok"};
     };
 
+    // PKCS#11 cannot tell before the token login whether the key has a digital signature PIN, nor
+    // how many tries of it are left, so the PIN dialog has a box that the digital signature PIN is
+    // the same and a field for it otherwise. The token PIN is tried only when the user leaves the
+    // box checked; when the token rejects it, a dialog asks for the digital signature PIN. The answer
+    // is the initial state of the box next time, keys without a digital signature PIN get no box.
+    NSString *memoryKey = [@"SignaturePin." stringByAppendingString:[PINPanel fingerprint:selected.cert]];
+    const NSInteger memory = [NSUserDefaults.standardUserDefaults integerForKey:memoryKey];
+    BOOL same = memory == SignaturePinUnknown || memory == SignaturePinSame;
     bool isInitialCheck = true;
     for (int retriesLeft = selected.retry; retriesLeft > 0; )
     {
@@ -334,6 +363,9 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
             return @{@"result": @"technical_error"};
         }
         [dialog setPinLength:selected];
+        if (!selected.pinpad && memory != SignaturePinNone) {
+            [dialog offerSignaturePin:same];
+        }
         for (NSDictionary *item in dict[(__bridge id)kSecOIDX509V1SubjectName][(__bridge id)kSecPropertyKeyValue]) {
             if ([item[(__bridge id)kSecPropertyKeyLabel] isEqualToString:(__bridge id)kSecOIDCommonName]) {
                 dialog->nameLabel.stringValue = item[(__bridge id)kSecPropertyKeyValue];
@@ -407,10 +439,16 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
         }
         else {
             std::string pin = dialog->pinField.stringValue.UTF8String;
+            if (!dialog->sameBox.hidden) {
+                same = [dialog sameChecked];
+            }
+            std::string signaturePin = dialog->pin2Field.hidden || same ? std::string() : dialog->pin2Field.stringValue.UTF8String;
             NSString *name = dialog->nameLabel.stringValue;
             try {
-                std::vector<std::vector<unsigned char>> signatures = [PINPanel signBatch:*pkcs11 token:selected hashes:hashes pin:pin name:name];
+                std::vector<std::vector<unsigned char>> signatures = [PINPanel signBatch:*pkcs11 token:selected hashes:hashes
+                    pin:pin signaturePin:signaturePin same:same name:name];
                 std::fill(pin.begin(), pin.end(), '\0');
+                std::fill(signaturePin.begin(), signaturePin.end(), '\0');
                 return result(signatures);
             }
             catch(const AuthenticationBadInput &) {
@@ -428,16 +466,19 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
             catch(const BaseException &e) {
                 _log("Exception: %s", e.what());
                 std::fill(pin.begin(), pin.end(), '\0');
+                std::fill(signaturePin.begin(), signaturePin.end(), '\0');
                 return @{@"result": @(e.getErrorCode().c_str())};
             }
             std::fill(pin.begin(), pin.end(), '\0');
+            std::fill(signaturePin.begin(), signaturePin.end(), '\0');
         }
     }
     return @{@"result": @"pin_blocked"};
 }
 
-// Asks for the digital signature PIN of keys with CKA_ALWAYS_AUTHENTICATE, empty when cancelled
-+ (std::string)signaturePin:(const PKCS11CardManager::Token &)token name:(NSString *)name
+// Asks for the digital signature PIN of keys with CKA_ALWAYS_AUTHENTICATE when the token PIN dialog
+// did not give it or the token rejected it, empty when cancelled
++ (std::string)signaturePin:(const PKCS11CardManager::Token &)token name:(NSString *)name retry:(BOOL)retry
 {
     PINPanel *signDialog = [[PINPanel alloc] init:_L("signature PIN") pinpad:NO];
     if (!signDialog) {
@@ -450,6 +491,10 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
     signDialog->messageField.stringValue = _L("signature PIN info");
     signDialog->messageField.textColor = NSColor.systemOrangeColor;
     signDialog->pinFieldLabel.font = [NSFont boldSystemFontOfSize:NSFont.systemFontSize];
+    if (retry) {
+        signDialog->errorField.stringValue = _L("incorrect PIN2");
+        signDialog->errorField.hidden = NO;
+    }
     MITFitDialog(signDialog->window, signDialog->rows, signDialog->pinFieldLabel);
     [NSApp activateIgnoringOtherApps:YES];
     NSModalResponse signResult = [NSApp runModalForWindow:signDialog->window];
@@ -463,37 +508,39 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
 // Signs in a worker thread and keeps the UI responsive with a progress panel for a batch,
 // the digital signature PIN dialog is shown in the main thread when the key needs it
 + (std::vector<std::vector<unsigned char>>)signBatch:(const PKCS11CardManager &)pkcs11 token:(const PKCS11CardManager::Token &)token
-    hashes:(const std::vector<std::vector<unsigned char>> &)hashes pin:(const std::string &)pin name:(NSString *)name
+    hashes:(const std::vector<std::vector<unsigned char>> &)hashes pin:(const std::string &)pin
+    signaturePin:(const std::string &)signaturePin same:(BOOL)same name:(NSString *)name
 {
-    // Like the dialog of the Windows driver the token PIN is tried first, it is often the same.
-    // A rejected attempt counts against the digital signature PIN tries, so it is tried only
-    // until the certificate is known to have a different digital signature PIN.
+    // The token PIN is the digital signature PIN only when the user left the box checked,
+    // the remembered answer is the initial state of the box next time
     NSString *memoryKey = [@"SignaturePin." stringByAppendingString:[PINPanel fingerprint:token.cert]];
     NSInteger memory = [NSUserDefaults.standardUserDefaults integerForKey:memoryKey];
     bool signaturePinUsed = false, signaturePinIsTokenPin = false;
     auto signPin = [&](bool retry) -> std::string {
         signaturePinUsed = true;
-        signaturePinIsTokenPin = !retry && memory != SignaturePinSeparate;
+        signaturePinIsTokenPin = !retry && same;
         if (signaturePinIsTokenPin) {
             return pin;
         }
+        if (!retry && !signaturePin.empty()) {
+            return signaturePin;
+        }
         if (NSThread.isMainThread) {
-            return [PINPanel signaturePin:token name:name];
+            return [PINPanel signaturePin:token name:name retry:retry];
         }
         __block std::string result;
         dispatch_sync(dispatch_get_main_queue(), ^{
-            result = [PINPanel signaturePin:token name:name];
+            result = [PINPanel signaturePin:token name:name retry:retry];
         });
         return result;
     };
     std::vector<std::vector<unsigned char>> signatures = hashes.size() == 1 ?
         pkcs11.signBatch(token, hashes, pin.c_str(), signPin) :
         [PINPanel signWithProgress:pkcs11 token:token hashes:hashes pin:pin signPin:signPin];
-    if (signaturePinUsed) {
-        NSInteger learned = signaturePinIsTokenPin ? SignaturePinSame : SignaturePinSeparate;
-        if (learned != memory) {
-            [NSUserDefaults.standardUserDefaults setInteger:learned forKey:memoryKey];
-        }
+    NSInteger learned = !signaturePinUsed ? SignaturePinNone :
+        signaturePinIsTokenPin ? SignaturePinSame : SignaturePinSeparate;
+    if (learned != memory) {
+        [NSUserDefaults.standardUserDefaults setInteger:learned forKey:memoryKey];
     }
     return signatures;
 }
@@ -529,7 +576,37 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
 
 - (IBAction)okClicked:(id)sender
 {
-    [NSApp stopModal];
+    if (okButton.enabled) {
+        [NSApp stopModal];
+    }
+}
+
+// Shows the box that the digital signature PIN is the token PIN, checked by same, and the field for it
+- (void)offerSignaturePin:(BOOL)same
+{
+    sameBox.state = same ? NSControlStateValueOn : NSControlStateValueOff;
+    for (NSView *view in @[sameBox, pin2Label, pin2Field]) {
+        view.hidden = NO;
+    }
+    NSStackView *body = (NSStackView *)sameBox.superview;
+    [body setCustomSpacing:14 afterView:sameBox];
+    window.autorecalculatesKeyViewLoop = YES;
+    [self sameToggled:nil];
+}
+
+- (BOOL)sameChecked
+{
+    return sameBox && !sameBox.hidden && sameBox.state == NSControlStateValueOn;
+}
+
+- (void)sameToggled:(id)sender
+{
+    pin2Field.enabled = ![self sameChecked];
+    pin2Label.textColor = pin2Field.enabled ? NSColor.labelColor : NSColor.disabledControlTextColor;
+    if (pin2Field.enabled && sender) {
+        [window makeFirstResponder:pin2Field];
+    }
+    [self controlTextDidChange:nil];
 }
 
 - (IBAction)cancelClicked:(id)sender
@@ -549,9 +626,11 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
 
 - (void)controlTextDidChange:(NSNotification*)notification;
 {
-    if (okButton.enabled != pinField.stringValue.length >= minPinLen)
+    BOOL needPin2 = pin2Field && !pin2Field.hidden && ![self sameChecked];
+    BOOL enabled = pinField.stringValue.length >= minPinLen && (!needPin2 || pin2Field.stringValue.length >= minPinLen);
+    if (okButton.enabled != enabled)
     {
-        okButton.enabled = pinField.stringValue.length >= minPinLen;
+        okButton.enabled = enabled;
         window.touchBar = [self makeTouchBar];
     }
 }

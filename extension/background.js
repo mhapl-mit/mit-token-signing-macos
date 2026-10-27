@@ -17,7 +17,8 @@
  */
 
 const NO_NATIVE_URL = "https://repos.mit-consulting.cz/token-sign/index.html";
-const DEVELOPER_URL = "https://repos.mit-consulting.cz/token-sign/forbidden.html";
+// The install guide explains a missing or not allowed native host the same way
+const DEVELOPER_URL = "https://repos.mit-consulting.cz/token-sign/index.html";
 
 const NATIVE_HOST = "cz.mit.consulting";
 

@@ -4,13 +4,28 @@
 
 - [ ] **Chrome Web Store:** vydat novou verzi rozšíření 1.1.0 (`signBatch()`).
       Stávající položka: https://chromewebstore.google.com/detail/mit-consulting-token-sign/hkckiflbaedpdigcjoeiacmfnlncpeoj
-      Zip ze složky `extension/` (bez starých `rozsireni_*.zip`), ID zůstává díky `key` v manifestu.
+      Zip `dist/mit-token-signing-extension_1.1.0.zip` (bez pole `key`, obchod drží ID sám).
 - [ ] **Microsoft Edge Add-ons:** vydat novou verzi 1.1.0 stávajícího doplňku
       https://microsoftedge.microsoft.com/addons/detail/mit-consulting-token-s/ajndpmmgagjlfgoegeadcgkiehlbcinl
       (Partner Center, https://partner.microsoft.com/dashboard/microsoftedge/), stejný zip
       jako pro Chrome. ID je už v `allowed_origins` manifestů hosta.
 - [ ] ERMS přepnout na `signBatch()` až po rozšíření nové verze k uživatelům,
       se zálohou na dosavadní cyklus `sign()` (viz README).
+
+## Vydání 1.2.0 a průvodce instalací
+
+- [x] Instalačky 1.2.0.13: MSI x64/x86 (WiX 3.14), `.deb` (Docker), `.pkg` (GitHub Actions),
+      nepodepsané. Průvodce instalací `web/install` + `build/web/package.sh` → balík pro ERMS.
+- [ ] Nahradit stránku https://repos.mit-consulting.cz/token-sign/index.html průvodcem
+      (obsah `dist/token-signing-install/`); rozšíření tam posílá uživatele bez programu.
+      Dnešní `exe/install_mit_token_sign_x64.msi` (1.1.2.0, podepsané vlastním certifikátem
+      M.I.T. Consulting s.r.o. platným do 1/2022, Windows mu nevěří) nahradit nebo přesměrovat.
+- [ ] ERMS: průvodce v podpisové knize — zadání pro erms-core
+      `C:\work\JavaProject\erms-archi\docs\koncepce\zadani\erms-core.md`.
+- [ ] Modul externího podpisu ISSD (samostatné repo): text návodu v `i18n_*.properties` odkázat na průvodce.
+- [ ] Před uvolněním běžným uživatelům: podpis MSI (Authenticode, např. Azure Trusted Signing)
+      a `.pkg` (Apple Developer ID + notarizace) přímo v sestavení.
+- [ ] Instalace bez práv správce (registrace hosta pro uživatele: HKCU, `~/Library`, `~/.config`).
 
 ## Nativní host
 

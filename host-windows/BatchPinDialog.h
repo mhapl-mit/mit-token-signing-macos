@@ -28,6 +28,9 @@ struct BatchPinRequest {
 	std::wstring error;    // wrong PIN and tries left
 	std::wstring label;    // PIN field
 	std::wstring label2;   // digital signature PIN field, empty for a dialog with one field
+	std::wstring sameLabel; // box that the digital signature PIN is the token PIN, disables label2
+	bool same = true;      // initial state of the box
+	bool signaturePin = false; // digital signature PIN dialog, details have room for three lines
 	unsigned long minPinLen = 4;
 };
 
@@ -35,5 +38,6 @@ struct BatchPinRequest {
 class BatchPinDialog {
 public:
 	// Returns the PIN as UTF-8, empty when cancelled. signaturePin gets the second field.
-	static std::string show(const BatchPinRequest &request, std::string *signaturePin = nullptr);
+	// same gets the state of the box of sameLabel, signaturePin stays empty when it is checked.
+	static std::string show(const BatchPinRequest &request, std::string *signaturePin = nullptr, bool *same = nullptr);
 };

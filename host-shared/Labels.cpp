@@ -125,7 +125,7 @@ Labels::lstring Labels::get(const std::string &labelKey) const {
         T("Norėdami pasirašyti, įveskite parašo PIN:"),
         T("Lai parakstītu, ievadi paraksta PIN:"),
         T("İmzalamak için imza PIN'ini girin:"),
-        T("Pro podpis zadejte PIN digitálního podpisu:"),
+        T("Pro podpis zadejte QPIN (PIN digitálního podpisu):"),
     } },
     { "signature PIN info", {
         T("Samm 2/2: kvalifitseeritud sertifikaat on kaitstud eraldi allkirja PIN-iga. See ei ole sama PIN, mille just sisestasid."),
@@ -135,6 +135,15 @@ Labels::lstring Labels::get(const std::string &labelKey) const {
         T("2. solis no 2: kvalificētais sertifikāts ir aizsargāts ar atsevišķu paraksta PIN. Tas nav PIN, ko tikko ievadījāt."),
         T("Adım 2/2: nitelikli sertifika ayrı bir imza PIN'i ile korunmaktadır. Az önce girdiğiniz PIN değildir."),
         T("Krok 2 ze 2: kvalifikovaný certifikát je chráněn samostatným PINem digitálního podpisu (QPIN). Nejde o PIN, který jste právě zadali."),
+    } },
+    { "signature PIN same", {
+        T("Allkirja PIN on sama mis PIN"),
+        T("The digital signature PIN is the same as the PIN"),
+        T("PIN-код подписи совпадает с PIN"),
+        T("Parašo PIN sutampa su PIN"),
+        T("Paraksta PIN ir tāds pats kā PIN"),
+        T("İmza PIN'i PIN ile aynı"),
+        T("QPIN je stejný jako PIN"),
     } },
     { "PIN title", {
         T("PIN"),

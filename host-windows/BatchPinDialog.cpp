@@ -48,6 +48,7 @@ const HANDLE PER_MONITOR_AWARE_V2 = HANDLE(-4);
 struct State {
 	const BatchPinRequest *request;
 	bool twoFields;
+	bool same = false;
 	std::string pin, pin2;
 	HFONT headingFont = nullptr, boldFont = nullptr;
 	std::unique_ptr<Gdiplus::Bitmap> logo;
@@ -157,6 +158,29 @@ void collapse(HWND dialog, int id)
 		SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
+bool sameChecked(HWND dialog)
+{
+	HWND box = GetDlgItem(dialog, IDC_BATCH_SAME);
+	return box && IsWindowVisible(box) && IsDlgButtonChecked(dialog, IDC_BATCH_SAME) == BST_CHECKED;
+}
+
+// OK needs PINs of the minimal length, the second one only without the box that they are the same
+void updateOk(HWND dialog, const State &state)
+{
+	int minLength = int(state.request->minPinLen > 0 ? state.request->minPinLen : 4);
+	int length = fieldLength(dialog, IDC_BATCH_PIN);
+	if (state.twoFields && !sameChecked(dialog))
+		length = min(length, fieldLength(dialog, IDC_BATCH_PIN2));
+	EnableWindow(GetDlgItem(dialog, IDOK), length >= minLength);
+}
+
+void applySame(HWND dialog)
+{
+	bool same = sameChecked(dialog);
+	EnableWindow(GetDlgItem(dialog, IDC_BATCH_LABEL2), !same);
+	EnableWindow(GetDlgItem(dialog, IDC_BATCH_PIN2), !same);
+}
+
 void roundedRect(Gdiplus::GraphicsPath &path, float x, float y, float width, float height, float radius)
 {
 	float d = radius * 2;
@@ -243,6 +267,15 @@ INT_PTR CALLBACK dialogProc(HWND dialog, UINT message, WPARAM wParam, LPARAM lPa
 			collapse(dialog, IDC_BATCH_ERROR);
 		if (request.details.empty())
 			collapse(dialog, IDC_BATCH_DETAILS);
+		if (GetDlgItem(dialog, IDC_BATCH_SAME)) {
+			if (request.sameLabel.empty()) {
+				collapse(dialog, IDC_BATCH_SAME);
+			} else {
+				SetDlgItemTextW(dialog, IDC_BATCH_SAME, request.sameLabel.c_str());
+				CheckDlgButton(dialog, IDC_BATCH_SAME, request.same ? BST_CHECKED : BST_UNCHECKED);
+				applySame(dialog);
+			}
+		}
 
 		SetFocus(GetDlgItem(dialog, IDC_BATCH_PIN));
 		return FALSE;
@@ -298,20 +331,22 @@ INT_PTR CALLBACK dialogProc(HWND dialog, UINT message, WPARAM wParam, LPARAM lPa
 		case IDC_BATCH_PIN:
 		case IDC_BATCH_PIN2:
 			if (HIWORD(wParam) == EN_CHANGE)
+				updateOk(dialog, *state);
+			break;
+		case IDC_BATCH_SAME:
+			if (HIWORD(wParam) == BN_CLICKED)
 			{
-				int minLength = int(state->request->minPinLen > 0 ? state->request->minPinLen : 4);
-				int length = fieldLength(dialog, IDC_BATCH_PIN);
-				if (state->twoFields)
-					length = min(length, fieldLength(dialog, IDC_BATCH_PIN2));
-				EnableWindow(GetDlgItem(dialog, IDOK), length >= minLength);
+				applySame(dialog);
+				updateOk(dialog, *state);
 			}
 			break;
 		case IDOK:
 			// Enter comes here also while the PIN is too short
 			if (!IsWindowEnabled(GetDlgItem(dialog, IDOK)))
 				return TRUE;
+			state->same = sameChecked(dialog);
 			state->pin = readUtf8(dialog, IDC_BATCH_PIN);
-			if (state->twoFields)
+			if (state->twoFields && !state->same)
 				state->pin2 = readUtf8(dialog, IDC_BATCH_PIN2);
 			EndDialog(dialog, IDOK);
 			return TRUE;
@@ -334,12 +369,13 @@ INT_PTR CALLBACK dialogProc(HWND dialog, UINT message, WPARAM wParam, LPARAM lPa
 
 }
 
-std::string BatchPinDialog::show(const BatchPinRequest &request, std::string *signaturePin)
+std::string BatchPinDialog::show(const BatchPinRequest &request, std::string *signaturePin, bool *same)
 {
 	Gdiplus::GdiplusStartupInput gdiplusInput;
 	ULONG_PTR gdiplus = 0;
 	Gdiplus::GdiplusStartup(&gdiplus, &gdiplusInput, nullptr);
 	INT_PTR result;
+	bool sameBox = false;
 	std::string pin, pin2;
 	{
 		// The logo bitmap must be gone before GDI+ shuts down
@@ -350,12 +386,13 @@ std::string BatchPinDialog::show(const BatchPinRequest &request, std::string *si
 		SetThreadDpiAwarenessContextFn setDpiAwareness = SetThreadDpiAwarenessContextFn(
 			GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetThreadDpiAwarenessContext"));
 		HANDLE previous = setDpiAwareness ? setDpiAwareness(PER_MONITOR_AWARE_V2) : nullptr;
-		result = DialogBoxParamW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(state.twoFields ? IDD_BATCH_PIN2 : IDD_BATCH_PIN),
-			nullptr, dialogProc, LPARAM(&state));
+		int dialog = state.twoFields ? IDD_BATCH_PIN2 : request.signaturePin ? IDD_BATCH_SIGNPIN : IDD_BATCH_PIN;
+		result = DialogBoxParamW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(dialog), nullptr, dialogProc, LPARAM(&state));
 		if (setDpiAwareness && previous)
 			setDpiAwareness(previous);
 		pin.swap(state.pin);
 		pin2.swap(state.pin2);
+		sameBox = state.same;
 	}
 	Gdiplus::GdiplusShutdown(gdiplus);
 
@@ -364,6 +401,8 @@ std::string BatchPinDialog::show(const BatchPinRequest &request, std::string *si
 		SecureZeroMemory(&pin2[0], pin2.size());
 		return std::string();
 	}
+	if (same)
+		*same = sameBox;
 	if (signaturePin)
 		*signaturePin = pin2;
 	if (!pin2.empty())
