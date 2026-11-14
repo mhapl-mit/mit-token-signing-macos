@@ -23,6 +23,8 @@ workflows:
           set -o pipefail
           # Build numbers continue after 1.2.0.15, the last one from GitHub Actions
           sh build/macos/build.sh $((BUILD_NUMBER + 15)) 2>&1 | tee build.log
+      - name: Permissions for the UI test
+        script: bash host-test/macos-ui-permissions.sh
       - name: Test with a SoftHSM token
         script: bash host-test/macos-ui-test.sh dist/*.pkg ui-test
     artifacts:
