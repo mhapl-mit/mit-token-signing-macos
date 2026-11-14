@@ -43,6 +43,7 @@
 #include <atomic>
 #include <chrono>
 #include <future>
+#include <memory>
 #include <string>
 
 class Signer: public QDialog {
@@ -67,10 +68,12 @@ public:
         for (const QString &hash: hashes)
             digests.push_back(fromHex(hash));
         PKCS11CardManager::Token selected;
-        PKCS11Path::Params p11 = PKCS11Path::getPkcs11ModulePath();
-        PKCS11CardManager pkcs11(p11.path);
+        PKCS11Path::Params p11;
+        std::unique_ptr<PKCS11CardManager> pkcs11;
         try {
-            for (const PKCS11CardManager::Token &token : pkcs11.tokens()) {
+            p11 = PKCS11Path::getPkcs11ModulePath();
+            pkcs11.reset(new PKCS11CardManager(p11.path));
+            for (const PKCS11CardManager::Token &token : pkcs11->tokens()) {
                 if (token.cert == data) {
                     selected = token;
                     break;
@@ -155,7 +158,7 @@ public:
                 signature = std::async(std::launch::async, [&]{
                     std::vector<std::vector<unsigned char>> result;
                     try {
-                        result = pkcs11.signBatch(selected, digests, nullptr);
+                        result = pkcs11->signBatch(selected, digests, nullptr);
                         dialog.accept();
                     } catch (const AuthenticationError &) {
                         --retriesLeft;
@@ -193,7 +196,7 @@ public:
             try {
                 bool signaturePinUsed = false, signaturePinIsTokenPin = false;
                 same = askBoth && dialog.sameBox->isChecked();
-                std::vector<std::vector<unsigned char>> signatures = signBatch(pkcs11, selected, digests,
+                std::vector<std::vector<unsigned char>> signatures = signBatch(*pkcs11, selected, digests,
                     dialog.pin->text().toUtf8(), askBoth && !same ? dialog.pin2->text().toUtf8() : QByteArray(),
                     dialog.nameLabel->text(), same, signaturePinUsed, signaturePinIsTokenPin);
                 int learned = !signaturePinUsed ? SignaturePinNone :

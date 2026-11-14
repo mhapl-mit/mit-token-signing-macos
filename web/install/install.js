@@ -80,13 +80,17 @@
             step("host", "missing", "Program v počítači chybí.");
             return;
         }
+        var doneText = document.getElementById("done-text");
         if (s.updates.indexOf("host") >= 0) {
             step("host", "update", "Program je nainstalovaný ve verzi " + s.hostVersion
                 + ", nainstalujte novější verzi " + latest + ". Podepisovat lze i se stávající.");
+            doneText.textContent = "Podepisovat lze i se stávající verzí programu.";
         } else {
             step("host", "ok", "Program je nainstalovaný (verze " + s.hostVersion + ").");
-            document.getElementById("done").style.display = "block";
+            doneText.textContent = "Vše potřebné je nainstalované.";
         }
+        // With the host answering, the signing test checks the card driver and the card
+        document.getElementById("done").style.display = "block";
         document.getElementById("versions").textContent = "Rozšíření " + s.extensionVersion + " · program " + s.hostVersion;
     }
 

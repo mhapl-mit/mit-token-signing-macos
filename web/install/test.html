@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Test podpisu kartou</title>
+<link rel="icon" href="logo.png">
+<!--
+Test of the whole signing round: the extension, the native host, the card driver and the card.
+Selects a certificate, signs test data (one signature, then a batch with one PIN entry when the
+host supports it) and verifies the signatures in the browser with the public key of the certificate.
+No document is signed and nothing is sent anywhere.
+-->
+<link rel="stylesheet" href="install.css">
+</head>
+<body>
+<main>
+<div class="card">
+  <header>
+    <h1>Test podpisu kartou</h1>
+    <img class="logo" src="logo.png" alt="M.I.T. Consulting">
+  </header>
+  <p class="intro">Test vyzkouší celý podpis: výběr certifikátu, zadání PINu a podpis kartou. Podepisují se jen
+     zkušební data, žádný dokument, a nic se nikam neodesílá. Podpis stránka nakonec ověří.</p>
+  <div class="missing-prereq" id="prereq" hidden>
+    <p id="prereq-text"></p>
+    <a class="button" href="index.html">Otevřít průvodce instalací</a>
+  </div>
+  <ol>
+    <li class="step" id="cert">
+      <div class="mark">1</div>
+      <div>
+        <h2>Výběr certifikátu</h2>
+        <p class="state">Čeká na spuštění testu.</p>
+        <p class="detail" id="cert-detail" hidden></p>
+      </div>
+    </li>
+    <li class="step" id="sign">
+      <div class="mark">2</div>
+      <div>
+        <h2>Podpis kartou</h2>
+        <p class="state">Po výběru certifikátu se zobrazí okno pro zadání PINu.</p>
+      </div>
+    </li>
+    <li class="step" id="batch">
+      <div class="mark">3</div>
+      <div>
+        <h2>Hromadný podpis</h2>
+        <p class="state">Tři podpisy s jedním zadáním PINu.</p>
+      </div>
+    </li>
+  </ol>
+  <div class="done" id="done"></div>
+  <footer>
+    <span id="versions">Zjišťuji…</span>
+    <span>
+      <a class="button secondary" href="index.html">Průvodce instalací</a>
+      <button class="button" id="start" type="button" disabled>Spustit test podpisu</button>
+    </span>
+  </footer>
+</div>
+</main>
+<script src="token-signing-check.js"></script>
+<script src="test.js"></script>
+</body>
+</html>

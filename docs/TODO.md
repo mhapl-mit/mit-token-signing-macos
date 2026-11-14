@@ -17,10 +17,9 @@
 
 - [x] Instalačky 1.2.0.13: MSI x64/x86 (WiX 3.14), `.deb` (Docker), `.pkg` (GitHub Actions),
       nepodepsané. Průvodce instalací `web/install` + `build/web/package.sh` → balík pro ERMS.
-- [ ] Nahradit stránku https://repos.mit-consulting.cz/token-sign/index.html průvodcem
-      (obsah `dist/token-signing-install/`); rozšíření tam posílá uživatele bez programu.
-      Dnešní `exe/install_mit_token_sign_x64.msi` (1.1.2.0, podepsané vlastním certifikátem
-      M.I.T. Consulting s.r.o. platným do 1/2022, Windows mu nevěří) nahradit nebo přesměrovat.
+- [x] Stránka https://repos.mit-consulting.cz/token-sign/ nahrazena průvodcem 1.2.0.19 (14. 11. 2026),
+      včetně testu podpisu `test.html`; `exe/install_mit_token_sign_*.msi` jsou MSI 1.2.0.19.
+      Test podpisu na serveru s kartou prošel.
 - [ ] ERMS: průvodce v podpisové knize — zadání pro erms-core
       `C:\work\JavaProject\erms-archi\docs\koncepce\zadani\erms-core.md`.
 - [ ] Modul externího podpisu ISSD (samostatné repo): text návodu v `i18n_*.properties` odkázat na průvodce.
@@ -48,6 +47,7 @@
       (`host-test/macos-ui-test.sh`, 5 podpisů ověřeno), dialogy ve stejném vzhledu jako
       Windows a Linux. Repozitář `mhapl-mit/mit-token-signing-macos` je jen kopie kódu bez
       `.pem`/`.crx` pro sestavení na Macu (lokální větev `github-snapshot`).
-- [ ] macOS: ověřit se skutečnou kartou na Macu kolegy (PIN, QPIN, pinpad, okno s průběhem).
+- [x] macOS: ověřeno se skutečnou kartou ProID+Q (MacBook Pro 2017 Intel, macOS 13) ve verzi 1.2.0.19.
+      1.2.0.15 a starší ovladače podepsané výrobcem nenačtou (chyběly entitlements, `driver_error`).
 - [x] macOS: skript pro sestavení pro kolegu `build/macos/build.sh` (jen Xcode z App Store).
 - [ ] macOS: verze s CryptoTokenKit.

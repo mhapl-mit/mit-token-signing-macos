@@ -40,3 +40,9 @@
   footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
            padding: 14px 24px; border-top: 1px solid var(--line); background: var(--bg); color: var(--muted); font-size: 13px; }
   .done { padding: 16px 24px; border-top: 1px solid var(--line); color: var(--ok); font-weight: 600; display: none; }
+  .missing-prereq { padding: 12px 24px 16px; border-top: 1px solid var(--line); color: var(--err); font-weight: 600; }
+  .missing-prereq p { margin: 0; }
+  .detail { color: var(--muted); font-size: 13px; }
+  .done.failed { color: var(--err); }
+  .button:disabled { opacity: .5; cursor: default; }
+  .done a.button { margin-left: 12px; }

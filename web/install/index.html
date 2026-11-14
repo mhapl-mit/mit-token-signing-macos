@@ -8,8 +8,8 @@
 <link rel="icon" href="logo.png">
 <!--
 Install guide for signing with a card in the browser. Shows what is missing in this browser:
-a supported browser, the extension, the native host or the card software, with the installer
-for this OS. The installers and version.json lie next to this page (build/web/package.sh).
+a supported browser, the extension, the native host or the card driver, with the installer
+for this OS. When the host answers, links to the signing test (test.html). The installers and version.json lie next to this page (build/web/package.sh).
 -->
 <link rel="stylesheet" href="install.css">
 </head>
@@ -80,22 +80,19 @@ for this OS. The installers and version.json lie next to this page (build/web/pa
     <li class="step always" id="card">
       <div class="mark">4</div>
       <div>
-        <h2>Software ke kartě</h2>
-        <p class="state">Tento krok stránka ověřit neumí.</p>
+        <h2>Ovladač ke kartě</h2>
+        <p class="state">Tento krok stránka ověřit neumí, ověří ho test podpisu.</p>
         <div class="how">
-          <p>Na počítači musí být program od vydavatele vaší karty nebo tokenu, se kterým karta už funguje:</p>
-          <p>
-            <a href="https://www.ica.cz/secure-store" target="_blank" rel="noopener">I.CA SecureStore</a> ·
-            <a href="https://proid.cz/ke-stazeni/" target="_blank" rel="noopener">ProID+ (Monet+)</a> ·
-            <a href="https://www.postsignum.cz/media_usb_tokeny_cip_karty.html" target="_blank" rel="noopener">PostSignum</a>
-          </p>
+          <p>Na počítači musí být nainstalovaný ovladač (software) ke kartě nebo tokenu. Pokud ho ještě nemáte,
+             stáhněte ho ze stránek vydavatele vašeho certifikátu nebo výrobce karty či tokenu a nainstalujte.</p>
           <p class="state">Na Linuxu dále balíčky <code>pcscd</code> a pro karty bez programu výrobce <code>opensc</code>
              (instalace programu MIT Token signing je doinstaluje sama).</p>
         </div>
       </div>
     </li>
   </ol>
-  <div class="done" id="done">Vše potřebné je nainstalované, můžete podepisovat.</div>
+  <div class="done" id="done"><span id="done-text">Vše potřebné je nainstalované.</span>
+    <a class="button" href="test.html">Vyzkoušet podpis kartou</a></div>
   <footer>
     <span id="versions"></span>
     <button class="button" id="again" type="button">Zkontrolovat znovu</button>

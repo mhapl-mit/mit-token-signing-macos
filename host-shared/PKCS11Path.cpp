@@ -269,8 +269,13 @@ PKCS11Path::Params PKCS11Path::getPkcs11ModulePath() {
             _log("Module '%s' failed: %s", path.c_str(), e.what());
         }
     }
-    if (!list.empty())
-        _log("Unknown ATR '%s' using default module '%s'", list[0].c_str(), openscPath.c_str());
+    // No card in any reader: report a missing certificate, not a driver error from loading
+    // OpenSC, which is usually not installed
+    if (list.empty()) {
+        _log("No card in a reader and no module with tokens");
+        throw NoCertificatesException();
+    }
+    _log("Unknown ATR '%s' using default module '%s'", list[0].c_str(), openscPath.c_str());
     return {openscPath, "PIN", "PIN"};
 #endif
 }

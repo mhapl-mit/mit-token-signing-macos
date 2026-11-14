@@ -302,10 +302,11 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
         }
     }
 
-    PKCS11Path::Params p11 = PKCS11Path::getPkcs11ModulePath();
+    PKCS11Path::Params p11;
     std::unique_ptr<PKCS11CardManager> pkcs11;
     PKCS11CardManager::Token selected;
     try {
+        p11 = PKCS11Path::getPkcs11ModulePath();
         pkcs11.reset(new PKCS11CardManager(p11.path));
         for (const PKCS11CardManager::Token &token : pkcs11->tokens()) {
             if (BinaryUtils::hex2bin(cert.UTF8String) == token.cert) {
