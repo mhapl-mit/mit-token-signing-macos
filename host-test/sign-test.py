@@ -22,6 +22,8 @@
 #
 # Usage: python3 sign-test.py <path to native host executable> [--batch <count>] [--info <text>]
 # Without --info no information dialog is shown, like ERMS does not send it.
+# With --version <version> it only checks that the host answers with that version, without
+# dialogs, for a CI Mac that does not allow clicking into them.
 
 import hashlib
 import json
@@ -68,6 +70,7 @@ def main():
     args = sys.argv[1:]
     count = 1
     info = None
+    version = None
     try:
         exe = args.pop(0)
         while args:
@@ -76,17 +79,26 @@ def main():
                 count = int(value)
             elif option == "--info":
                 info = value
+            elif option == "--version":
+                version = value
             else:
                 raise ValueError(option)
     except (IndexError, ValueError):
-        print("Usage: %s <native host executable> [--batch <count>] [--info <text>]" % sys.argv[0])
+        print("Usage: %s <native host executable> [--batch <count>] [--info <text>] [--version <version>]" % sys.argv[0])
         return 2
     proc = subprocess.Popen([exe], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     origin = "https://test.mit-consulting.cz"
     hashes = [hashlib.sha256(b"MIT Token Signing test %d" % i).digest() for i in range(count)]
     try:
         send(proc, {"type": "VERSION", "nonce": "1", "origin": origin})
-        print("VERSION: %s" % receive(proc))
+        answer = receive(proc)
+        print("VERSION: %s" % answer)
+        if version:
+            if answer.get("version") != version:
+                print("FAIL: expected version %s" % version)
+                return 1
+            print("OK: version %s" % version)
+            return 0
 
         print("Select a signing certificate in the dialog...")
         send(proc, {"type": "CERT", "nonce": "2", "origin": origin, "lang": "cs", "filter": "SIGN"})

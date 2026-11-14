@@ -1,7 +1,7 @@
 # macOS build on Codemagic (Mac mini M2). The code comes from the GitHub mirror
 # mhapl-mit/mit-token-signing-macos, the main repository is on Gitea.
-# Builds the same way as a colleague with build/macos/build.sh, tests the package with a SoftHSM
-# token and keeps the package, the log and the screenshots of the dialogs.
+# Builds the same way as a colleague with build/macos/build.sh, installs the package and keeps
+# it with the log.
 # No keys or passwords here; Developer ID signing later through Codemagic environment groups.
 workflows:
   macos:
@@ -23,11 +23,19 @@ workflows:
           set -o pipefail
           # Build numbers continue after 1.2.0.15, the last one from GitHub Actions
           sh build/macos/build.sh $((BUILD_NUMBER + 15)) 2>&1 | tee build.log
-      - name: Permissions for the UI test
-        script: bash host-test/macos-ui-permissions.sh
-      - name: Test with a SoftHSM token
-        script: bash host-test/macos-ui-test.sh dist/*.pkg ui-test
+      # The machine does not allow clicking into the dialogs nor screenshots, not even with the
+      # permissions written to TCC.db, so the signing test with SoftHSM (host-test/macos-ui-test.sh)
+      # runs on GitHub Actions by hand. Here only the installed host answers with its version.
+      - name: Install and check the version
+        script: |
+          #!/bin/bash
+          set -e
+          PKG=$(ls dist/mit-token-signing_*.pkg)
+          VERSION=${PKG##*_}
+          sudo installer -pkg "$PKG" -target /
+          python3 host-test/sign-test.py \
+            "/Library/Application Support/MIT Token Signing/chrome-token-signing.app/Contents/MacOS/chrome-token-signing" \
+            --version "${VERSION%.pkg}"
     artifacts:
       - build.log
       - dist/*.pkg
-      - ui-test/*
