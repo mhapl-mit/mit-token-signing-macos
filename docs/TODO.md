@@ -2,13 +2,14 @@
 
 ## Rozšíření v obchodech
 
-- [ ] **Chrome Web Store:** vydat novou verzi rozšíření 1.1.0 (`signBatch()`).
+- [x] **Chrome Web Store:** vydat novou verzi rozšíření 1.1.0 (`signBatch()`), zveřejněno v listopadu 2026.
       Stávající položka: https://chromewebstore.google.com/detail/mit-consulting-token-sign/hkckiflbaedpdigcjoeiacmfnlncpeoj
       Zip `dist/mit-token-signing-extension_1.1.0.zip` (bez pole `key`, obchod drží ID sám).
 - [ ] **Microsoft Edge Add-ons:** vydat novou verzi 1.1.0 stávajícího doplňku
       https://microsoftedge.microsoft.com/addons/detail/mit-consulting-token-s/ajndpmmgagjlfgoegeadcgkiehlbcinl
       (Partner Center, https://partner.microsoft.com/dashboard/microsoftedge/), stejný zip
       jako pro Chrome. ID je už v `allowed_origins` manifestů hosta.
+      Čeká na převod doplňku na hlavní účet firmy, stav a účty v `docs/ACCOUNTS.md`.
 - [ ] ERMS přepnout na `signBatch()` až po rozšíření nové verze k uživatelům,
       se zálohou na dosavadní cyklus `sign()` (viz README).
 

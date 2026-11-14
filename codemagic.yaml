@@ -1,0 +1,31 @@
+# macOS build on Codemagic (Mac mini M2). The code comes from the GitHub mirror
+# mhapl-mit/mit-token-signing-macos, the main repository is on Gitea.
+# Builds the same way as a colleague with build/macos/build.sh, tests the package with a SoftHSM
+# token and keeps the package, the log and the screenshots of the dialogs.
+# No keys or passwords here; Developer ID signing later through Codemagic environment groups.
+workflows:
+  macos:
+    name: macOS
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: latest
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+      cancel_previous_builds: true
+    scripts:
+      - name: Build
+        script: |
+          #!/bin/bash
+          set -o pipefail
+          # Build numbers continue after 1.2.0.15, the last one from GitHub Actions
+          sh build/macos/build.sh $((BUILD_NUMBER + 15)) 2>&1 | tee build.log
+      - name: Test with a SoftHSM token
+        script: bash host-test/macos-ui-test.sh dist/*.pkg ui-test
+    artifacts:
+      - build.log
+      - dist/*.pkg
+      - ui-test/*

@@ -1,9 +1,10 @@
 # macOS build on GitHub Actions, the repository on GitHub is only a mirror for builds on a Mac.
 # Builds the same way as a colleague with build/macos/build.sh and keeps the package and the log.
+# Only a manual backup, releases are built on Codemagic (codemagic.yaml). Its build number is
+# the run number, so set the version of a release by hand if this is ever used again.
 name: macOS
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       runner:
