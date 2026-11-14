@@ -33,9 +33,13 @@ workflows:
           PKG=$(ls dist/mit-token-signing_*.pkg)
           VERSION=${PKG##*_}
           sudo installer -pkg "$PKG" -target /
-          python3 host-test/sign-test.py \
-            "/Library/Application Support/MIT Token Signing/chrome-token-signing.app/Contents/MacOS/chrome-token-signing" \
-            --version "${VERSION%.pkg}"
+          APP="/Library/Application Support/MIT Token Signing/chrome-token-signing.app"
+          python3 host-test/sign-test.py "$APP/Contents/MacOS/chrome-token-signing" --version "${VERSION%.pkg}"
+          # Without it the hardened runtime refuses drivers signed by their vendor (ProID+, SafeNet),
+          # SoftHSM from Homebrew is not signed by anybody and loads anyway
+          codesign -d --entitlements - "$APP" | grep -q disable-library-validation ||
+            { echo "FAIL: the host lacks com.apple.security.cs.disable-library-validation"; exit 1; }
+          echo "OK: library validation disabled"
     artifacts:
       - build.log
       - dist/*.pkg
