@@ -1,8 +1,12 @@
 # macOS build on Codemagic (Mac mini M2). The code comes from the GitHub mirror
 # mhapl-mit/mit-token-signing-macos, the main repository is on Gitea.
-# Builds the same way as a colleague with build/macos/build.sh, installs the package and keeps
-# it with the log.
-# No keys or passwords here; Developer ID signing later through Codemagic environment groups.
+# Builds the same way as a colleague with build/macos/build.sh, signed with the Developer ID
+# certificates of M.I.T. Consulting (Team ID 6XLXADSD3Q) and notarized by Apple, installs the
+# package and keeps it with the log.
+# The keys are only in the Codemagic environment group developer_id (application settings,
+# Environment variables): DEVELOPER_ID_APPLICATION_P12 and DEVELOPER_ID_INSTALLER_P12 (base64),
+# DEVELOPER_ID_P12_PASSWORD and APP_STORE_CONNECT_PRIVATE_KEY (the .p8 of the App Store Connect
+# API team key "Codemagic notarization"). See docs/ACCOUNTS.md.
 workflows:
   macos:
     name: macOS
@@ -10,6 +14,11 @@ workflows:
     max_build_duration: 30
     environment:
       xcode: latest
+      groups:
+        - developer_id
+      vars:
+        APP_STORE_CONNECT_KEY_ID: A45Z3QV9VZ
+        APP_STORE_CONNECT_ISSUER_ID: c4fd09cd-0b9e-4804-bf5b-9c1401576554
     triggering:
       events:
         - push
@@ -17,6 +26,35 @@ workflows:
         - pattern: main
       cancel_previous_builds: true
     scripts:
+      - name: Signing keychain
+        script: |
+          #!/bin/bash
+          set -e
+          for v in DEVELOPER_ID_APPLICATION_P12 DEVELOPER_ID_INSTALLER_P12 DEVELOPER_ID_P12_PASSWORD APP_STORE_CONNECT_PRIVATE_KEY; do
+            [ -n "${!v}" ] || { echo "FAIL: $v is missing in the Codemagic group developer_id"; exit 1; }
+          done
+          KEYS=$HOME/signing
+          mkdir -p "$KEYS"
+          KEYCHAIN=$KEYS/signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          # Intermediate certificate of Developer ID G2, in case the machine does not have it
+          curl -sSf -o "$KEYS/DeveloperIDG2CA.cer" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          security import "$KEYS/DeveloperIDG2CA.cer" -k "$KEYCHAIN" || true
+          for p12 in DEVELOPER_ID_APPLICATION_P12 DEVELOPER_ID_INSTALLER_P12; do
+            echo "${!p12}" | base64 --decode > "$KEYS/$p12.p12"
+            security import "$KEYS/$p12.p12" -k "$KEYCHAIN" -f pkcs12 -P "$DEVELOPER_ID_P12_PASSWORD" \
+              -T /usr/bin/codesign -T /usr/bin/pkgbuild -T /usr/bin/productbuild
+            rm -f "$KEYS/$p12.p12"
+          done
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v "$KEYCHAIN"
+          # notarytool with the App Store Connect API key, read by build/macos/build.sh and the Makefile
+          printf '%s\n' "$APP_STORE_CONNECT_PRIVATE_KEY" > "$KEYS/AuthKey.p8"
+          echo "NOTARY_ARGS=--key $KEYS/AuthKey.p8 --key-id $APP_STORE_CONNECT_KEY_ID --issuer $APP_STORE_CONNECT_ISSUER_ID" >> "$CM_ENV"
       - name: Build
         script: |
           #!/bin/bash
@@ -32,14 +70,27 @@ workflows:
           set -e
           PKG=$(ls dist/mit-token-signing_*.pkg)
           VERSION=${PKG##*_}
+          # Signed by the Developer ID of M.I.T. Consulting, notarized and accepted by Gatekeeper
+          pkgutil --check-signature "$PKG" | grep -q "Developer ID Installer: M.I.T. Consulting, s.r.o. (6XLXADSD3Q)" ||
+            { pkgutil --check-signature "$PKG"; echo "FAIL: the package is not signed by the Developer ID"; exit 1; }
+          xcrun stapler validate "$PKG"
+          spctl --assess --type install --verbose=2 "$PKG"
           sudo installer -pkg "$PKG" -target /
           APP="/Library/Application Support/MIT Token Signing/chrome-token-signing.app"
           python3 host-test/sign-test.py "$APP/Contents/MacOS/chrome-token-signing" --version "${VERSION%.pkg}"
+          codesign --verify --strict --verbose=2 "$APP"
+          codesign -dv "$APP" 2>&1 | grep -q "TeamIdentifier=6XLXADSD3Q" ||
+            { echo "FAIL: the host is not signed by the Developer ID"; exit 1; }
+          spctl --assess --type execute --verbose=2 "$APP"
           # Without it the hardened runtime refuses drivers signed by their vendor (ProID+, SafeNet),
           # SoftHSM from Homebrew is not signed by anybody and loads anyway
           codesign -d --entitlements - "$APP" | grep -q disable-library-validation ||
             { echo "FAIL: the host lacks com.apple.security.cs.disable-library-validation"; exit 1; }
-          echo "OK: library validation disabled"
+          echo "OK: signed, notarized, library validation disabled"
+    publishing:
+      scripts:
+        - name: Remove the keys
+          script: rm -rf "$HOME/signing"
     artifacts:
       - build.log
       - dist/*.pkg

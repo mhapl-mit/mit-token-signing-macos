@@ -5,8 +5,8 @@
 #   sh build/macos/build.sh [build number]
 #
 # The package is signed and notarized when the Developer ID certificates of M.I.T. Consulting
-# are in the keychain (and the notarytool profile "mit-token-signing" exists), otherwise it is
-# built unsigned, which is fine for testing.
+# are in the keychain (and the notarytool profile "mit-token-signing" exists or NOTARY_ARGS is
+# set), otherwise it is built unsigned, which is fine for testing.
 set -e
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -21,7 +21,8 @@ fi
 xcodebuild -version | head -1
 
 if security find-identity -v | grep -q "Developer ID Installer"; then
-    if xcrun notarytool history --keychain-profile mit-token-signing >/dev/null 2>&1; then
+    # NOTARY_ARGS from the environment (Codemagic: App Store Connect API key) or the keychain profile
+    if [ -n "$NOTARY_ARGS" ] || xcrun notarytool history --keychain-profile mit-token-signing >/dev/null 2>&1; then
         TARGET=notarize
     else
         echo "notarytool profile mit-token-signing not found, the package is signed but not notarized"
