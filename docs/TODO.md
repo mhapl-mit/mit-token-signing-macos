@@ -18,8 +18,9 @@
 - [x] Instalačky 1.2.0.13: MSI x64/x86 (WiX 3.14), `.deb` (Docker), `.pkg` (GitHub Actions),
       nepodepsané. Průvodce instalací `web/install` + `build/web/package.sh` → balík pro ERMS.
 - [x] Stránka https://repos.mit-consulting.cz/token-sign/ nahrazena průvodcem (14. 11. 2026),
-      včetně testu podpisu `test.html`; teď verze 1.2.0.20, `exe/install_mit_token_sign_*.msi`
-      jsou MSI 1.2.0.20 (ověřeno proti sestaveným souborům). Test podpisu na serveru s kartou prošel.
+      včetně testu podpisu `test.html`; teď verze 1.2.0.26 (17. 11. 2026, macOS podepsaný
+      a notarizovaný), `exe/install_mit_token_sign_*.msi` jsou MSI 1.2.0.26 a jsou přímo
+      v `dist/token-signing-install/exe/` (ověřeno proti sestaveným souborům).
 - [x] 1.2.0.20: bez karty ve čtečce hlásí macOS a Linux `no_certificates` místo `driver_error`;
       na Macu ověřeno bez karty a s eTokenem 5110 (SafeNet Authentication Client).
 - [ ] ERMS: průvodce v podpisové knize — zadání pro erms-core
@@ -27,6 +28,8 @@
 - [ ] Modul externího podpisu ISSD (samostatné repo): text návodu v `i18n_*.properties` odkázat na průvodce.
 - [x] `.pkg` podepsaný Apple Developer ID a notarizovaný přímo v Codemagic (od 1.2.0.25,
       17. 11. 2026); na Macu nainstalováno bez „Přesto otevřít“, test podpisu prošel.
+- [x] 1.2.0.26: host na macOS a Linuxu načte ovladač karty jen jednou na krok (ProID+Q 8 s místo
+      16 s), test podpisu bez okna s hláškou `info`.
 - [ ] Před uvolněním běžným uživatelům: podpis MSI (Authenticode, např. Azure Trusted Signing)
       přímo v sestavení.
 - [ ] Instalace bez práv správce (registrace hosta pro uživatele: HKCU, `~/Library`, `~/.config`).

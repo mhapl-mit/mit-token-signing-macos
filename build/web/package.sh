@@ -1,8 +1,8 @@
 #!/bin/sh
 # Puts the install guide (web/install) and the installers of one release under stable names
 # into dist/token-signing-install/ and dist/mit-token-signing-install_<version>.zip, which web
-# applications serve as it is (ERMS), and dist/repos-server/ with the layout of the site root
-# of repos.mit-consulting.cz (upload token-sign/ there).
+# applications serve as it is (ERMS). The folder (with exe/) is also the content of
+# repos.mit-consulting.cz/token-sign/, dist/repos-server/ has the layout of the site root.
 #
 # Usage: build/web/package.sh <version>, e.g. 1.2.0.13; the installers of that version
 # must be in dist/ (build/windows/build.ps1, build/linux/build.sh, build/macos/build.sh).
@@ -32,12 +32,14 @@ rm -f "$DIST/mit-token-signing-install_$VERSION.zip"
     "mit-token-signing-install_$VERSION" 2>/dev/null \
     || python -c "import shutil, sys; shutil.make_archive(sys.argv[1], 'zip', '.', 'token-signing-install')" \
     "mit-token-signing-install_$VERSION")
-# repos.mit-consulting.cz: the guide in /token-sign/, the links of the old page in /token-sign/exe/
+# repos.mit-consulting.cz/token-sign/ gets the whole folder, with the links of the old page in
+# exe/ (added after the zip, ERMS does not need the second copy of the MSI packages)
+mkdir -p "$OUT/exe"
+cp "$OUT/mit-token-signing-x64.msi" "$OUT/exe/install_mit_token_sign_x64.msi"
+cp "$OUT/mit-token-signing-x86.msi" "$OUT/exe/install_mit_token_sign_x86.msi"
 SERVER="$DIST/repos-server/token-sign"
 rm -rf "$DIST/repos-server"
-mkdir -p "$SERVER/exe"
-cp "$OUT"/* "$SERVER/"
-cp "$OUT/mit-token-signing-x64.msi" "$SERVER/exe/install_mit_token_sign_x64.msi"
-cp "$OUT/mit-token-signing-x86.msi" "$SERVER/exe/install_mit_token_sign_x86.msi"
+mkdir -p "$DIST/repos-server"
+cp -r "$OUT" "$SERVER"
 
 echo "Done: dist/token-signing-install, dist/mit-token-signing-install_$VERSION.zip (ERMS), dist/repos-server (repos.mit-consulting.cz)"
