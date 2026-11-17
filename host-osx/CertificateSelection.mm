@@ -65,8 +65,8 @@ static NSTouchBarItemIdentifier touchBarItemSegmentId = @"cz.mit-consulting.chro
         df.dateFormat = @"dd.MM.YYYY";
         NSDateComponents *components = [[NSDateComponents alloc] init];
         components.year = 2001;
-        PKCS11Path::Params p11 = PKCS11Path::getPkcs11ModulePath();
-        for (const PKCS11CardManager::Token &token : PKCS11CardManager(p11.path).tokens()) {
+        PKCS11Path::Module module = PKCS11Path::openModule();
+        for (const PKCS11CardManager::Token &token : module.tokens) {
             CFDataRef data = CFDataCreateWithBytesNoCopy(nil, token.cert.data(), token.cert.size(), kCFAllocatorNull);
             SecCertificateRef cert = SecCertificateCreateWithData(nil, data);
             CFRelease(data);

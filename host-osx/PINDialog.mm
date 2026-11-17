@@ -297,7 +297,13 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
         alert.icon = [[NSImage alloc] initByReferencingFile:@"/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertNoteIcon.icns"];
         alert.window.title = @"MIT Token signing";
         [NSApp activateIgnoringOtherApps:YES];
-        if ([alert runModal] != NSAlertFirstButtonReturn) {
+        NSModalResponse response = [alert runModal];
+        // The module is loaded next on this thread for several seconds, without a pass of the run
+        // loop the alert stays on screen and looks as if OK was not clicked. The modal mode does
+        // not deliver the next message from the browser, only redraws the screen.
+        [alert.window orderOut:nil];
+        [NSRunLoop.currentRunLoop runMode:NSModalPanelRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+        if (response != NSAlertFirstButtonReturn) {
             return @{@"result": @"user_cancel"};
         }
     }
@@ -306,9 +312,10 @@ static NSTouchBarItemIdentifier touchBarItemCancelId = @"cz.mit-consulting.chrom
     std::unique_ptr<PKCS11CardManager> pkcs11;
     PKCS11CardManager::Token selected;
     try {
-        p11 = PKCS11Path::getPkcs11ModulePath();
-        pkcs11.reset(new PKCS11CardManager(p11.path));
-        for (const PKCS11CardManager::Token &token : pkcs11->tokens()) {
+        PKCS11Path::Module module = PKCS11Path::openModule();
+        p11 = module.params;
+        pkcs11 = std::move(module.manager);
+        for (const PKCS11CardManager::Token &token : module.tokens) {
             if (BinaryUtils::hex2bin(cert.UTF8String) == token.cert) {
                 selected = token;
                 break;

@@ -213,7 +213,8 @@
     function run() {
         var start = document.getElementById("start");
         var done = document.getElementById("done");
-        var options = {lang: "cs", info: "Zkušební podpis, nepodepisuje se žádný dokument"};
+        // No info: the host would show it in an extra dialog before the PIN, the page says it instead
+        var options = {lang: "cs"};
         var signing = new window.TokenSigning();
         var cert = null, certHex = null;
         start.disabled = true;

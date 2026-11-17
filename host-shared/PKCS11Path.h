@@ -21,9 +21,13 @@
 #include <string>
 #include <vector>
 
+#ifndef _WIN32
+#include "PKCS11CardManager.h"
+
+#include <memory>
+#endif
+
 class PKCS11Path {
-private:
-    static std::vector<std::string> atrList();
 public:
     struct Params
     {
@@ -31,6 +35,22 @@ public:
         std::string authPINLabel, signPINLabel;
     };
     static Params getPkcs11ModulePath();
+#ifndef _WIN32
+    // Initialized module with its tokens. The module found by probing is kept, so it is not
+    // initialized a second time (ProID+ takes about 4 s for C_Initialize and as much to read the card).
+    struct Module
+    {
+        Params params;
+        std::unique_ptr<PKCS11CardManager> manager;
+        std::vector<PKCS11CardManager::Token> tokens;
+    };
+    static Module openModule();
+#endif
     // Installed modules of Czech token vendors and modules from pkcs11-modules.conf
     static std::vector<std::string> probedModules();
+private:
+    static std::vector<std::string> atrList();
+#ifndef _WIN32
+    static Params getPkcs11ModulePath(Module *module);
+#endif
 };

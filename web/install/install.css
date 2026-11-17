@@ -46,3 +46,4 @@
   .done.failed { color: var(--err); }
   .button:disabled { opacity: .5; cursor: default; }
   .done a.button { margin-left: 12px; }
+  .notice { margin: 4px 24px 16px; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--bg); }

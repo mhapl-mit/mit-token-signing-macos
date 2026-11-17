@@ -144,7 +144,25 @@ std::vector<std::string> PKCS11Path::probedModules() {
     return result;
 }
 
+#ifndef _WIN32
+PKCS11Path::Module PKCS11Path::openModule() {
+    Module module;
+    module.params = getPkcs11ModulePath(&module);
+    if (!module.manager) {
+        module.manager.reset(new PKCS11CardManager(module.params.path));
+        module.tokens = module.manager->tokens();
+    }
+    return module;
+}
+
 PKCS11Path::Params PKCS11Path::getPkcs11ModulePath() {
+    return getPkcs11ModulePath(nullptr);
+}
+
+PKCS11Path::Params PKCS11Path::getPkcs11ModulePath(Module *module) {
+#else
+PKCS11Path::Params PKCS11Path::getPkcs11ModulePath() {
+#endif
 #ifdef _WIN32
     // Use PKCS11 driver on windows to avoid PIN buffering
     static const std::string litPath = [] {
@@ -260,8 +278,14 @@ PKCS11Path::Params PKCS11Path::getPkcs11ModulePath() {
         if (access(path.c_str(), F_OK) != 0)
             continue;
         try {
-            if (!PKCS11CardManager(path).tokens().empty()) {
+            std::unique_ptr<PKCS11CardManager> manager(new PKCS11CardManager(path));
+            std::vector<PKCS11CardManager::Token> tokens = manager->tokens();
+            if (!tokens.empty()) {
                 _log("Using module '%s' with available tokens", path.c_str());
+                if (module) {
+                    module->manager = std::move(manager);
+                    module->tokens = std::move(tokens);
+                }
                 return {path, "PIN", "PIN"};
             }
             _log("Module '%s' has no tokens", path.c_str());

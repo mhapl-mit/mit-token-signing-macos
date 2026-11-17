@@ -71,9 +71,10 @@ public:
         PKCS11Path::Params p11;
         std::unique_ptr<PKCS11CardManager> pkcs11;
         try {
-            p11 = PKCS11Path::getPkcs11ModulePath();
-            pkcs11.reset(new PKCS11CardManager(p11.path));
-            for (const PKCS11CardManager::Token &token : pkcs11->tokens()) {
+            PKCS11Path::Module module = PKCS11Path::openModule();
+            p11 = module.params;
+            pkcs11 = std::move(module.manager);
+            for (const PKCS11CardManager::Token &token : module.tokens) {
                 if (token.cert == data) {
                     selected = token;
                     break;

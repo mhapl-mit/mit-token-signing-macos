@@ -40,8 +40,8 @@ public:
     {
         try {
             QList<QStringList> certs;
-            PKCS11Path::Params p11 = PKCS11Path::getPkcs11ModulePath();
-            for (const PKCS11CardManager::Token &token : PKCS11CardManager(p11.path).tokens()) {
+            PKCS11Path::Module module = PKCS11Path::openModule();
+            for (const PKCS11CardManager::Token &token : module.tokens) {
                 QByteArray data = QByteArray::fromRawData((const char*)token.cert.data(), int(token.cert.size()));
                 QSslCertificate cert(data, QSsl::Der);
 

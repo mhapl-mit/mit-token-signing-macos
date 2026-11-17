@@ -25,8 +25,10 @@
 - [ ] ERMS: průvodce v podpisové knize — zadání pro erms-core
       `C:\work\JavaProject\erms-archi\docs\koncepce\zadani\erms-core.md`.
 - [ ] Modul externího podpisu ISSD (samostatné repo): text návodu v `i18n_*.properties` odkázat na průvodce.
+- [x] `.pkg` podepsaný Apple Developer ID a notarizovaný přímo v Codemagic (od 1.2.0.25,
+      17. 11. 2026); na Macu nainstalováno bez „Přesto otevřít“, test podpisu prošel.
 - [ ] Před uvolněním běžným uživatelům: podpis MSI (Authenticode, např. Azure Trusted Signing)
-      a `.pkg` (Apple Developer ID + notarizace) přímo v sestavení.
+      přímo v sestavení.
 - [ ] Instalace bez práv správce (registrace hosta pro uživatele: HKCU, `~/Library`, `~/.config`).
 
 ## Nativní host
