@@ -48,7 +48,9 @@ workflows:
             printf '%s' "${!p12}" | tr -d '[:space:]' | base64 --decode > "$KEYS/$p12.p12"
             # Not secret, compare with the hash of the .p12 file kept with the keys
             echo "$p12: $(shasum -a 256 "$KEYS/$p12.p12" | cut -c1-16)"
-            keychain add-certificates --certificate "$KEYS/$p12.p12" --certificate-password "$P12_PASSWORD"
+            # By default only codesign and productsign may use the key, pkgbuild signs the package
+            keychain add-certificates --certificate "$KEYS/$p12.p12" --certificate-password "$P12_PASSWORD" \
+              --allow-all-applications
             rm -f "$KEYS/$p12.p12"
           done
           security find-identity -v
