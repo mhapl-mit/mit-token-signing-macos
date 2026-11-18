@@ -36,8 +36,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Name="MIT Token Signing" UpgradeCode="3e52954d-eee4-4dd8-a4f2-318521e3dbd9"
-      Id="*" Language="1033" Version="$(var.VERSION)" Codepage="1251" Manufacturer="M.I.T. Consulting, s.r.o.">
-    <Package Platform="$(var.Platform)" Keywords="Installer" InstallerVersion="405" Compressed="yes"/>
+      Id="*" Language="1029" Version="$(var.VERSION)" Codepage="1250" Manufacturer="M.I.T. Consulting, s.r.o.">
+    <Package Platform="$(var.Platform)" Keywords="Installer" InstallerVersion="405" Compressed="yes"
+      Languages="1029" SummaryCodepage="1250" Description="MIT Token Signing"/>
     <MediaTemplate EmbedCab="yes" CompressionLevel="high"/>
     <Icon Id="Icon.ico" SourceFile="host-windows\icon_mit.ico"/>
     <Property Id="ARPPRODUCTICON" Value="Icon.ico"/>
@@ -45,23 +46,62 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
     <Property Id="CHROMEINSTALL" Value="1"/>
     <Property Id="EDGEINSTALL" Value="1"/>
     <Property Id="EDGEFORCEINSTALL" Value="1"/>
-    <Property Id="FIREFOXINSTALL" Value="1"/>
-    <!-- https://github.com/open-eid/windows-installer/blob/master/FirefoxActionWix/README.md -->
-    <Binary Id="FirefoxAction.CA.dll" SourceFile="host-windows\FirefoxAction.CA.dll" />
-    <CustomAction Id="ExtensionSettingsFirefox" Return="check" Execute="firstSequence"
-      BinaryKey="FirefoxAction.CA.dll" DllEntry="ExtensionSettingsInstall" />
-    <CustomAction Id="ExtensionSettingsNoFirefox" Return="check" Execute="firstSequence"
-      BinaryKey="FirefoxAction.CA.dll" DllEntry="ExtensionSettingsRemove" />
-    <CustomAction Id="ExtensionSettingsRemove" Return="check" Execute="firstSequence"
-      BinaryKey="FirefoxAction.CA.dll" DllEntry="ExtensionSettingsRemove" />
-    <Property Id="EXTENSIONSETTINGS_URL" Value="https://addons.mozilla.org/firefox/downloads/latest/token-signing2/latest.xpi" />
-    <Property Id="EXTENSIONSETTINGS_UUID" Value="{443830f0-1fff-4f9a-aa1e-444bafbc7319}" />
+    <!-- No Firefox custom actions (open-eid FirefoxAction.CA.dll): while a version carrying them was
+         being upgraded they ran unelevated, could not write HKLM\Software\Policies\Mozilla and the upgrade
+         failed with 1603; they also forced the open-eid add-on token-signing2 into Firefox. Firefox is not
+         supported yet. The released 1.1.2.0 (5. 3. 2021) was built without them as well. -->
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage=
-      "A newer version of [ProductName] is already installed. If you are trying to downgrade, please uninstall the newer version first."/>
-    <Condition Message="[ProductName] requires Windows 7 or higher.">
+      "Je nainstalovaná novější verze [ProductName]. Pro instalaci starší verze ji nejdřív odinstalujte."/>
+    <Condition Message="[ProductName] vyžaduje Windows 7 nebo novější.">
       <![CDATA[Installed OR (VersionNT >= 601)]]>
     </Condition>
-    <UIRef Id="WixUI_Minimal" />
+
+    <!-- Czech UI (light -cultures:cs-cz), no license page: Welcome -> Install -> progress -> finish.
+         Based on WixUI_Minimal of WiX 3, the welcome dialog with license replaced by WelcomeDlg. -->
+    <WixVariable Id="WixUIDialogBmp" Value="host-windows\dialog.bmp"/>
+    <WixVariable Id="WixUIBannerBmp" Value="host-windows\banner.bmp"/>
+    <UI Id="MitTokenSigningUI">
+      <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8"/>
+      <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12"/>
+      <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes"/>
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal"/>
+      <Property Id="WixUI_Mode" Value="Minimal"/>
+      <DialogRef Id="ErrorDlg"/>
+      <DialogRef Id="FatalError"/>
+      <DialogRef Id="FilesInUse"/>
+      <DialogRef Id="MsiRMFilesInUse"/>
+      <DialogRef Id="PrepareDlg"/>
+      <DialogRef Id="ProgressDlg"/>
+      <DialogRef Id="ResumeDlg"/>
+      <DialogRef Id="UserExit"/>
+      <DialogRef Id="WelcomeDlg"/>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="1">NOT Installed</Publish>
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2">Installed</Publish>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999">1</Publish>
+      <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg">1</Publish>
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+      <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+      <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg">1</Publish>
+      <Property Id="ARPNOMODIFY" Value="1"/>
+      <!-- Status line of the progress dialog, Windows Installer has it only in English -->
+      <ProgressText Action="InstallValidate">Ověřování instalace</ProgressText>
+      <ProgressText Action="InstallInitialize">Příprava instalace</ProgressText>
+      <ProgressText Action="RemoveExistingProducts">Odebírání předchozí verze</ProgressText>
+      <ProgressText Action="ProcessComponents">Registrace součástí</ProgressText>
+      <ProgressText Action="UnpublishFeatures">Odebírání registrace funkcí</ProgressText>
+      <ProgressText Action="RemoveRegistryValues">Odebírání hodnot registru</ProgressText>
+      <ProgressText Action="RemoveFiles">Odebírání souborů</ProgressText>
+      <ProgressText Action="InstallFiles">Kopírování souborů</ProgressText>
+      <ProgressText Action="WriteRegistryValues">Zápis do registru</ProgressText>
+      <ProgressText Action="RegisterUser">Registrace uživatele</ProgressText>
+      <ProgressText Action="RegisterProduct">Registrace produktu</ProgressText>
+      <ProgressText Action="PublishFeatures">Registrace funkcí</ProgressText>
+      <ProgressText Action="PublishProduct">Registrace produktu</ProgressText>
+      <ProgressText Action="InstallFinalize">Dokončování instalace</ProgressText>
+      <ProgressText Action="Rollback">Vracení změn</ProgressText>
+    </UI>
+    <UIRef Id="WixUI_Common"/>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id='ProgramFilesFolder'>
@@ -129,15 +169,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
             Key='SOFTWARE\Mozilla\NativeMessagingHosts\cz.mit.consulting' />
       </Component> -->
     </Directory>
-
-    <InstallExecuteSequence>
-      <!-- Install/Upgrade/Modify/Repair with FIREFOX support -->
-      <Custom Action="ExtensionSettingsFirefox" Before="WriteRegistryValues">FIREFOXINSTALL=1 AND NOT ((REMOVE="ALL") AND (NOT UPGRADINGPRODUCTCODE))</Custom>
-      <!-- Install/Upgrade/Modify/Repair without FIREFOX support -->
-      <Custom Action="ExtensionSettingsNoFirefox" Before="InstallFinalize">NOT (FIREFOXINSTALL=1) AND NOT ((REMOVE="ALL") AND (NOT UPGRADINGPRODUCTCODE))</Custom>
-      <!-- Package remove -->
-      <Custom Action="ExtensionSettingsRemove" Before="InstallFinalize">(REMOVE="ALL") AND (NOT UPGRADINGPRODUCTCODE)</Custom>
-    </InstallExecuteSequence>
 
     <Feature Id="Install" Level="1" Title="MIT Token Signing" Display="expand" ConfigurableDirectory="APPLICATIONFOLDER">
       <ComponentRef Id="Application"/>

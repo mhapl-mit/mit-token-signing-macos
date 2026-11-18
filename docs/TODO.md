@@ -30,6 +30,8 @@
       17. 11. 2026); na Macu nainstalováno bez „Přesto otevřít“, test podpisu prošel.
 - [x] 1.2.0.26: host na macOS a Linuxu načte ovladač karty jen jednou na krok (ProID+Q 8 s místo
       16 s), test podpisu bez okna s hláškou `info`.
+- [x] 1.2.0.27: MSI bez akce pro Firefox z open-eid, stejně jako zákaznická 1.1.2.0 (5. 3. 2021).
+      Zůstala v `.wxs` v gitu a upgrade z 1.2.0.x bez práv správce kvůli ní padal s 1603.
 - [ ] Před uvolněním běžným uživatelům: podpis MSI (Authenticode, např. Azure Trusted Signing)
       přímo v sestavení.
 - [ ] Instalace bez práv správce (registrace hosta pro uživatele: HKCU, `~/Library`, `~/.config`).
